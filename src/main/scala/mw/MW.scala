@@ -6,10 +6,10 @@ import breeze.numerics._
 class InvalidArgumentException(message: String) extends Exception(message)
 
 trait Nature {
-  def update(strategy: DenseVector[Double])
+  def update(id: Int, strategy: DenseVector[Double])
 }
 
-abstract class Action[N<:Nature](val nature: N) {
+abstract class Expert[N<:Nature](val nature: N) {
   def nextLoss(): Double
 }
 
@@ -22,7 +22,7 @@ abstract class Action[N<:Nature](val nature: N) {
 // column response, and it keeps track of the average row and column strategies.
 // In the routing game, it would provide a best response method that computes the
 // shortest path, etc.
-class MWAlgorithm[N<:Nature](epsilon: Double, actions: List[Action[N]], val nature: N) {
+class MWAlgorithm[N<:Nature](id: Int, epsilon: Double, actions: List[Expert[N]], val nature: N) {
   if(epsilon >= 1 || epsilon <= 0)
     throw new InvalidArgumentException("epsilon should be in (0, 1)")
   
@@ -30,7 +30,7 @@ class MWAlgorithm[N<:Nature](epsilon: Double, actions: List[Action[N]], val natu
   val strategy:DenseVector[Double] = DenseVector.fill[Double](support){1./support}
   
   def next() {
-    nature.update(strategy)
+    nature.update(id, strategy)
     val weights = new DenseVector[Double](actions.map(_.nextLoss).map(math.pow(1-epsilon, _)).toArray)
     strategy :*= weights
     strategy :/= strategy.norm(1)

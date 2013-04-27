@@ -3,12 +3,11 @@ package mw
 import breeze.linalg._
 import breeze.numerics._
 
-class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
+abstract class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
   // A is the payoff matrix, assumed to be normalized (entries in [0, 1])
   // row minimizes, column maximizes
   val (nRows, nCols) = (A.rows, A.cols)
   var rounds = 0
-  var bestColResponse = 0
   
   val cumulativeColStrategy = DenseVector.zeros[Double](nCols)
   val cumulativeRowStrategy = DenseVector.zeros[Double](nRows)
@@ -21,31 +20,73 @@ class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
     outcome(0)
   }
   
-  def computeBestColResponse(rowStrategy: DenseVector[Double]): (Int, Double) = {
+  def computeBestColResponse(rowStrategy: DenseVector[Double]): DenseVector[Double] = {
     // compute the best column response
     val payoffs = A.t * rowStrategy
-    (payoffs.argmax, payoffs.max)
+    val resp = DenseVector.zeros[Double](nCols)
+    resp(payoffs.argmax) = 1
+    resp
   }
   
-  def computeBestRowResponse(colStrategy: DenseVector[Double]): (Int, Double) = {
+  def computeBestRowResponse(colStrategy: DenseVector[Double]): DenseVector[Double] = {
+    // compute the best column response
     val payoffs = A * colStrategy
-    (payoffs.argmin, payoffs.min)
+    val resp = DenseVector.zeros[Double](nRows)
+    resp(payoffs.argmax) = 1
+    resp
   }
   
-  def update(rowStrategy: DenseVector[Double]) {
-    bestColResponse = computeBestColResponse(rowStrategy)._1
+}
+
+class ZSGAdversarial(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
+  var bestColResponse: DenseVector[Double] = DenseVector.fill[Double](nCols){1./nCols}
+  
+  def update(id: Int, rowStrategy: DenseVector[Double]) {
+    bestColResponse = computeBestColResponse(rowStrategy)
     rounds += 1
     // update the average strategies
-    for(i <- 0 to nRows-1)
-      cumulativeRowStrategy(i) += rowStrategy(i)
-    
-    cumulativeColStrategy(bestColResponse) += 1
+    cumulativeRowStrategy += rowStrategy
+    cumulativeColStrategy += bestColResponse
   }
 }
 
-class ZeroSumGameAction(game: ZeroSumGame, row: Int) extends Action[ZeroSumGame](game){
+class ZSGNoRegret(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
+  var colStrategy: DenseVector[Double] = DenseVector.fill[Double](nCols){1./nCols}
+  var rowStrategy: DenseVector[Double] = DenseVector.fill[Double](nRows){1./nRows}
+  
+  def update(id: Int, strategy: DenseVector[Double]) {
+    rounds += 1
+    if(id == 0){ // row is playing
+      cumulativeRowStrategy += strategy
+      rowStrategy = strategy
+    }else if(id == 1){
+      cumulativeColStrategy += strategy
+      colStrategy = strategy
+    }
+    
+  }
+}
+
+class ZSGNoRegretRow(game: ZSGNoRegret, row: Int) extends Expert[ZSGNoRegret](game){
+  val pureStrat = DenseVector.zeros[Double](game.nRows)
+  pureStrat(row) = 1.
   def nextLoss(): Double = {
-    val colResponse = game.bestColResponse
-    return game.A(row, colResponse)
+    game.computeOutcome(pureStrat, game.colStrategy)
+  }
+}
+
+class ZSGNoRegretCol(game: ZSGNoRegret, col: Int) extends Expert[ZSGNoRegret](game){
+  val pureStrat = DenseVector.zeros[Double](game.nCols)
+  pureStrat(col) = 1.
+  def nextLoss(): Double = {
+    -game.computeOutcome(game.rowStrategy, pureStrat)
+  }
+}
+
+class ZSGAdversarialRow(game: ZSGAdversarial, row: Int) extends Expert[ZSGAdversarial](game){
+  val pureStrat = DenseVector.zeros[Double](game.nRows)
+  pureStrat(row) = 1.
+  def nextLoss(): Double = {
+    game.computeOutcome(pureStrat, game.bestColResponse)
   }
 }
