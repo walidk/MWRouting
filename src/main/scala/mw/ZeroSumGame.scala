@@ -1,13 +1,11 @@
 package mw
 
 import breeze.linalg._
-import breeze.numerics._
 
 abstract class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
   // A is the payoff matrix, assumed to be normalized (entries in [0, 1])
   // row minimizes, column maximizes
   val (nRows, nCols) = (A.rows, A.cols)
-  var rounds = 0
   
   val cumulativeColStrategy = DenseVector.zeros[Double](nCols)
   val cumulativeRowStrategy = DenseVector.zeros[Double](nRows)
@@ -43,7 +41,6 @@ class ZSGAdversarial(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
   
   def update(id: Int, rowStrategy: DenseVector[Double]) {
     bestColResponse = computeBestColResponse(rowStrategy)
-    rounds += 1
     // update the average strategies
     cumulativeRowStrategy += rowStrategy
     cumulativeColStrategy += bestColResponse
@@ -55,7 +52,6 @@ class ZSGNoRegret(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
   var rowStrategy: DenseVector[Double] = DenseVector.fill[Double](nRows){1./nRows}
   
   def update(id: Int, strategy: DenseVector[Double]) {
-    rounds += 1
     if(id == 0){ // row is playing
       cumulativeRowStrategy += strategy
       rowStrategy = strategy

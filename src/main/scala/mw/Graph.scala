@@ -3,7 +3,7 @@ package mw
 import scala.collection.mutable.HashMap
 import breeze.linalg._
 
-case class Edge(from:Node, to:Node) {
+case class Edge(from:Node, to:Node, latency: Double => Double) {
   override def toString(): String = {
     from.id + "->" + to.id
   }
@@ -28,8 +28,8 @@ class DirectedGraph {
     nodes += (node.id->node)
   }
   
-  def addEdge(from: Node, to: Node) {
-    val edge = Edge(from, to)
+  def addEdge(from: Node, to: Node, latency: Double=>Double) {
+    val edge = Edge(from, to, latency)
     edges += (from.id, to.id)->edge
     from.outEdges += (to.id->edge)
     to.inEdges += (from.id->edge)
@@ -46,18 +46,17 @@ class DirectedGraph {
 
 
 object DirectedGraph{
-  def apply(adjMatrix: DenseMatrix[Int]): DirectedGraph = {
+  def apply(adj: List[List[(Int, Double=>Double)]]): DirectedGraph = {
     val graph = new DirectedGraph()
-    val n = adjMatrix.rows
+    val n = adj.size
     
     (0 to n-1).map(id => graph.addNode(new Node(id)))
-    
     val nodes = graph.nodes
     
-    for(fromId <- 0 to n-1; toId <- 0 to n-1; if(adjMatrix(fromId, toId) == 1)){
+    for((neighb, fromId) <- adj.zipWithIndex; (toId, latency) <- neighb){
       val from = nodes(fromId)
       val to = nodes(toId)
-      graph.addEdge(from, to)      
+      graph.addEdge(from, to, latency)
     }
     
     graph
