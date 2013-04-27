@@ -1,10 +1,12 @@
 package mw
-import util.linAlgebra._
+import breeze.linalg._
+import breeze.numerics._
+
 
 class InvalidArgumentException(message: String) extends Exception(message)
 
 trait Nature {
-  def update(strategy: Array[Double])
+  def update(strategy: DenseVector[Double])
 }
 
 abstract class Action[N<:Nature](val nature: N) {
@@ -25,18 +27,12 @@ class MWAlgorithm[N<:Nature](epsilon: Double, actions: List[Action[N]], val natu
     throw new InvalidArgumentException("epsilon should be in (0, 1)")
   
   val support = actions.length
-  var strategy = Array.fill(support)(1./support)
-  
-  def normalize() {
-    val norm = strategy.sum
-    for(i<- 0 to support-1)
-      strategy(i)/=norm
-  }
+  val strategy:DenseVector[Double] = DenseVector.fill[Double](support){1./support}
   
   def next() {
     nature.update(strategy)
-    val weights = actions.map(_.nextLoss).map(math.pow(1-epsilon, _)).toArray
-    strategy = strategy.dotMult(weights).arrayValue()
-    normalize()
+    val weights = new DenseVector[Double](actions.map(_.nextLoss).map(math.pow(1-epsilon, _)).toArray)
+    strategy :*= weights
+    strategy :/= strategy.norm(1)
   }
 }

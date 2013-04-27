@@ -1,41 +1,38 @@
 package mw
-import util.linAlgebra._
 
-class ZeroSumGame(val A: Array[Array[Double]]) extends Nature {
+import breeze.linalg._
+import breeze.numerics._
+
+class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
   // A is the payoff matrix, assumed to be normalized (entries in [0, 1])
   // row minimizes, column maximizes
-  val nRows = A.length
-  val nCols = A(0).length
+  val (nRows, nCols) = (A.rows, A.cols)
   var rounds = 0
   var bestColResponse = 0
   
-  val cumulativeColStrategy = new Array[Double](nCols)
-  val cumulativeRowStrategy = new Array[Double](nRows)
+  val cumulativeColStrategy = DenseVector.zeros[Double](nCols)
+  val cumulativeRowStrategy = DenseVector.zeros[Double](nRows)
   
-  private def getNormalized(cumulativeStrategy: Array[Double]): Array[Double] = {
-    val norm = cumulativeStrategy.sum
-    cumulativeStrategy.map(_/norm)
+  def getAvgColStrategy() = cumulativeColStrategy/cumulativeColStrategy.norm(1)
+  def getAvgRowStrategy() = cumulativeRowStrategy/cumulativeRowStrategy.norm(1)
+  
+  def computeOutcome(x: DenseVector[Double], y: DenseVector[Double]): Double = {
+    val outcome = x.t * (A * y)
+    outcome(0)
   }
   
-  def getAvgColStrategy() = getNormalized(cumulativeColStrategy)
-  def getAvgRowStrategy() = getNormalized(cumulativeRowStrategy)
-  
-  def computeOutcome(x: Array[Double], y: Array[Double]): Double = {
-    x.times(A).times(y.transp()).doubleValue
-  }
-  
-  def computeBestColResponse(rowStrategy: Array[Double]): (Int, Double) = {
+  def computeBestColResponse(rowStrategy: DenseVector[Double]): (Int, Double) = {
     // compute the best column response
-    val ((_, argmax), max) = rowStrategy.times(A).argMax()
-    (argmax, max)
+    val payoffs = A.t * rowStrategy
+    (payoffs.argmax, payoffs.max)
   }
   
-  def computeBestRowResponse(colStrategy: Array[Double]): (Int, Double) = {
-    val ((_, argmin), min) = A.times(colStrategy.transp()).argMin()
-    (argmin, min)
+  def computeBestRowResponse(colStrategy: DenseVector[Double]): (Int, Double) = {
+    val payoffs = A * colStrategy
+    (payoffs.argmin, payoffs.min)
   }
   
-  def update(rowStrategy: Array[Double]) {
+  def update(rowStrategy: DenseVector[Double]) {
     bestColResponse = computeBestColResponse(rowStrategy)._1
     rounds += 1
     // update the average strategies
@@ -49,6 +46,6 @@ class ZeroSumGame(val A: Array[Array[Double]]) extends Nature {
 class ZeroSumGameAction(game: ZeroSumGame, row: Int) extends Action[ZeroSumGame](game){
   def nextLoss(): Double = {
     val colResponse = game.bestColResponse
-    return game.A(row)(colResponse)
+    return game.A(row, colResponse)
   }
 }

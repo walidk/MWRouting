@@ -1,16 +1,14 @@
 package mw
 
+import breeze.linalg._
+
 object main {
   def testZeroSumConvergence() {
     val epsilon = .1
     val T = 1000
     
     // payoff matrix
-    val A = Array[Array[Double]](
-      Array[Double](.5, 1, 0),
-      Array[Double](0, .5, 1),
-      Array[Double](1, 0, .5),
-      Array[Double](.5, 0, 0))
+    val A = DenseMatrix((.5, 1., 0.), (0., .5, 1.), (1., 0., .5), (.5, 0., 0.))
     val game = new ZeroSumGame(A)
     val actions = (0 to 3).map(new ZeroSumGameAction(game, _)).toList
     val alg = new MWAlgorithm[ZeroSumGame](epsilon, actions, game)
@@ -24,7 +22,7 @@ object main {
         game.computeBestColResponse(x)._2 - game.computeOutcome(x, y),
         game.computeOutcome(x, y) - game.computeBestRowResponse(y)._2)
       println(delta)
-      println(x.toList)
+      println(x)
     }
     
   }
