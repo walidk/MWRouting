@@ -1,8 +1,10 @@
 package mw
 
 import breeze.linalg._
+import util.Visualizer
 
-abstract class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
+
+abstract class ZSG(val A: DenseMatrix[Double]) extends Nature {
   // A is the payoff matrix, assumed to be normalized (entries in [0, 1])
   // row minimizes, column maximizes
   val (nRows, nCols) = (A.rows, A.cols)
@@ -34,20 +36,16 @@ abstract class ZeroSumGame(val A: DenseMatrix[Double]) extends Nature {
     resp
   }
   
-}
-
-class ZSGAdversarial(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
-  var bestColResponse: DenseVector[Double] = DenseVector.fill[Double](nCols){1./nCols}
-  
-  def update(id: Int, rowStrategy: DenseVector[Double]) {
-    bestColResponse = computeBestColResponse(rowStrategy)
-    // update the average strategies
-    cumulativeRowStrategy += rowStrategy
-    cumulativeColStrategy += bestColResponse
+  def getDelta(x: DenseVector[Double], y: DenseVector[Double]): Double = {
+    math.max(
+        computeOutcome(x, computeBestColResponse(x)) - computeOutcome(x, y),
+        computeOutcome(x, y) - computeOutcome(computeBestRowResponse(y), y))
   }
 }
 
-class ZSGNoRegret(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
+
+
+class ZeroSumGame(A: DenseMatrix[Double]) extends ZSG(A) {
   var colStrategy: DenseVector[Double] = DenseVector.fill[Double](nCols){1./nCols}
   var rowStrategy: DenseVector[Double] = DenseVector.fill[Double](nRows){1./nRows}
   
@@ -63,7 +61,7 @@ class ZSGNoRegret(A: DenseMatrix[Double]) extends ZeroSumGame(A) {
   }
 }
 
-class ZSGNoRegretRow(game: ZSGNoRegret, row: Int) extends Expert[ZSGNoRegret](game){
+class ZeroSumGameRowExpert(game: ZeroSumGame, row: Int) extends Expert[ZeroSumGame](game){
   val pureStrat = DenseVector.zeros[Double](game.nRows)
   pureStrat(row) = 1.
   def nextLoss(): Double = {
@@ -71,7 +69,7 @@ class ZSGNoRegretRow(game: ZSGNoRegret, row: Int) extends Expert[ZSGNoRegret](ga
   }
 }
 
-class ZSGNoRegretCol(game: ZSGNoRegret, col: Int) extends Expert[ZSGNoRegret](game){
+class ZeroSumGameColExpert(game: ZeroSumGame, col: Int) extends Expert[ZeroSumGame](game){
   val pureStrat = DenseVector.zeros[Double](game.nCols)
   pureStrat(col) = 1.
   def nextLoss(): Double = {
@@ -79,10 +77,38 @@ class ZSGNoRegretCol(game: ZSGNoRegret, col: Int) extends Expert[ZSGNoRegret](ga
   }
 }
 
-class ZSGAdversarialRow(game: ZSGAdversarial, row: Int) extends Expert[ZSGAdversarial](game){
-  val pureStrat = DenseVector.zeros[Double](game.nRows)
-  pureStrat(row) = 1.
-  def nextLoss(): Double = {
-    game.computeOutcome(pureStrat, game.bestColResponse)
+class ZeroSumGameSim(A: DenseMatrix[Double]){
+  var eps: Int => Double = t => .1
+  val (nbRows, nbCols) = (A.rows, A.cols)
+  val game = new ZeroSumGame(A)
+  
+  def launch(T: Int) {
+    val rowExperts = (0 to nbRows-1).map(new ZeroSumGameRowExpert(game, _)).toList
+    val colExperts = (0 to nbCols-1).map(new ZeroSumGameColExpert(game, _)).toList
+    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps, rowExperts, game)
+    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps, colExperts, game)
+
+    val xs = DenseMatrix.zeros[Double](4, T)
+    val ys = DenseMatrix.zeros[Double](3, T)
+    val deltas = DenseMatrix.zeros[Double](1, T)
+
+    for (t <- 0 to T - 1) {
+      rowAlg.next()
+      colAlg.next()
+      val x = rowAlg.strategy
+      val y = colAlg.strategy
+//      val x = game.getAvgRowStrategy
+//      val y = game.getAvgColStrategy
+
+      deltas(0, t) = game.getDelta(x, y)
+      xs(::, t) := x
+      ys(::, t) := y
+    }
+
+    new Visualizer("t", "mu(t)", "avg row strategy").printData(xs)
+    new Visualizer("t", "mu(t)", "avg col strategy").printData(ys)
+    new Visualizer("t", "mu(t)", "delta").printData(deltas)
+    println(deltas(0, T - 1))
   }
 }
+

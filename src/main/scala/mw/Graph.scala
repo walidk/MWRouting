@@ -3,18 +3,22 @@ package mw
 import scala.collection.mutable.HashMap
 import breeze.linalg._
 
-case class Edge(from:Node, to:Node, latency: Double => Double) {
+
+
+case class Edge(id: Int, from:Node, to:Node, latency: Double => Double) {
   override def toString(): String = {
     from.id + "->" + to.id
   }
 }
 
+case class Path(edges: List[Edge])
+
 case class Node(id: Int) {
   val inEdges = HashMap[Int, Edge]()
   val outEdges = HashMap[Int, Edge]()
   
-  def pred = inEdges.values.map(_.from)
-  def succ = outEdges.values.map(_.to)
+  def preNodes = inEdges.values.map(_.from)
+  def sucNodes = outEdges.values.map(_.to)
   
 }
 
@@ -22,17 +26,19 @@ case class Node(id: Int) {
 
 class DirectedGraph {
   val nodes = HashMap[Int, Node]()
-  val edges = HashMap[(Int, Int), Edge]()
+  val edges = HashMap[Int, Edge]()
+  var nbEdges = 0
   
   def addNode(node: Node) {
     nodes += (node.id->node)
   }
   
   def addEdge(from: Node, to: Node, latency: Double=>Double) {
-    val edge = Edge(from, to, latency)
-    edges += (from.id, to.id)->edge
+    val edge = Edge(nbEdges, from, to, latency)
+    edges += nbEdges->edge
     from.outEdges += (to.id->edge)
     to.inEdges += (from.id->edge)
+    nbEdges+=1
   }
   
   override def toString(): String = {
@@ -41,24 +47,39 @@ class DirectedGraph {
     "\nedges=" + edges.values.map(_.toString) +
     ")"
   }
+  
+  def findLooplessPaths(sourceId: Int, sinkId: Int): List[Path] = {
+    type IntSet = scala.collection.immutable.HashSet[Int]
+    val sink = nodes(sinkId)
+    def findPathsRec(current: Node, exploredIds: IntSet): Iterable[List[Edge]] = {
+      if(current == sink)
+        List(Nil)
+      else{
+        val newExplored = exploredIds+(current.id)
+        val edgesToExplore = current.outEdges.values.filterNot(edge => newExplored.contains(edge.to.id))
+        edgesToExplore.flatMap(edge => findPathsRec(edge.to, newExplored).map(edge::_))
+      }
+    }
+    findPathsRec(nodes(sourceId), new IntSet()).toList.map(Path(_))
+  }
+  
 }
 
 
 
 object DirectedGraph{
-  def apply(adj: List[List[(Int, Double=>Double)]]): DirectedGraph = {
+  def fromAdjacencyMap(adj: Map[Int, List[(Int, Double=>Double)]]): DirectedGraph = {
     val graph = new DirectedGraph()
-    val n = adj.size
     
-    (0 to n-1).map(id => graph.addNode(new Node(id)))
+    for(id <- adj.keys)
+      graph.addNode(new Node(id))
     val nodes = graph.nodes
     
-    for((neighb, fromId) <- adj.zipWithIndex; (toId, latency) <- neighb){
+    for((fromId, neighb) <- adj; (toId, latency) <- neighb){
       val from = nodes(fromId)
       val to = nodes(toId)
       graph.addEdge(from, to, latency)
     }
-    
     graph
   }
   
