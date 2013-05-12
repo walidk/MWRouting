@@ -42,7 +42,8 @@ class ZeroSumGameAdversarialSim(A: DenseMatrix[Double]) {
       deltas(0, t) = game.getDelta(x, y)
       xs(::, t) := x
     }
-    new Visualizer("t", "mu(t)", "Average row strategy").printData(xs)
-    new Visualizer("t", "mu(t)", "delta").printData(deltas)
+    new Visualizer("t", "mu(t)", "Average row strategy").plotData(xs)
+    new Visualizer("t", "mu(t)", "delta").plotData(deltas)
+    new Visualizer("", "", "Strategies").plotStrategies(xs)
   }
 }

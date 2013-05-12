@@ -88,8 +88,8 @@ class ZeroSumGameSim(A: DenseMatrix[Double]){
     val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps, rowExperts, game)
     val colAlg = new MWAlgorithm[ZeroSumGame](1, eps, colExperts, game)
 
-    val xs = DenseMatrix.zeros[Double](4, T)
-    val ys = DenseMatrix.zeros[Double](3, T)
+    val xs = DenseMatrix.zeros[Double](nbRows, T)
+    val ys = DenseMatrix.zeros[Double](nbCols, T)
     val deltas = DenseMatrix.zeros[Double](1, T)
 
     for (t <- 0 to T - 1) {
@@ -105,9 +105,12 @@ class ZeroSumGameSim(A: DenseMatrix[Double]){
       ys(::, t) := y
     }
 
-    new Visualizer("t", "mu(t)", "avg row strategy").printData(xs)
-    new Visualizer("t", "mu(t)", "avg col strategy").printData(ys)
-    new Visualizer("t", "mu(t)", "delta").printData(deltas)
+    new Visualizer("t", "mu(t)", "row strategy").plotData(xs)
+    new Visualizer("t", "mu(t)", "col strategy").plotData(ys)
+    new Visualizer("", "", "row strategy").plotStrategies(xs)
+    new Visualizer("", "", "col strategy").plotStrategies(ys)
+    
+    new Visualizer("t", "mu(t)", "delta").plotData(deltas)
     println(deltas(0, T - 1))
   }
 }

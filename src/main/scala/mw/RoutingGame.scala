@@ -95,18 +95,25 @@ class RoutingGameSim(
     for (k <- 0 to K - 1)
       algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game)
 
-    val xs = DenseMatrix.zeros[Double](4, T)
-    val ls = DenseMatrix.zeros[Double](4, T)
+    // simulation
+    val xs = new Array[DenseMatrix[Double]](K)
+    val ls = new Array[DenseMatrix[Double]](K)
+    for (k <- 0 to K - 1) {
+      xs(k) = DenseMatrix.zeros[Double](experts(k).length, T)
+      ls(k) = DenseMatrix.zeros[Double](experts(k).length, T)
+    }
+
     for (t <- 0 to T - 1) {
       for (alg <- algs)
         alg.next()
-      val x = DenseVector.vertcat(game.pathFlows(0), game.pathFlows(1))
-      val l = DenseVector.vertcat(game.getLatencies(0), game.getLatencies(1))
-
-      xs(::, t) := x
-      ls(::, t) := l
+      for (k <- 0 to K - 1) {
+        xs(k)(::, t) := game.pathFlows(k)
+        ls(k)(::, t) := game.getLatencies(k)
+      }
     }
-    new Visualizer("t", "mu(t)", "Flow").printData(xs)
-    new Visualizer("t", "mu(t)", "Latency").printData(ls)
+    new Visualizer("t", "mu(t)", "Flow").plotData(xs)
+    new Visualizer("t", "mu(t)", "Latency").plotData(ls)
+    for (data <- xs)
+      new Visualizer("", "", "Strategies").plotStrategies(data)
   }
 }
