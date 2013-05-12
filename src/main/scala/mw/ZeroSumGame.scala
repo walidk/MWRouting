@@ -32,7 +32,7 @@ abstract class ZSG(val A: DenseMatrix[Double]) extends Nature {
     // compute the best column response
     val payoffs = A * colStrategy
     val resp = DenseVector.zeros[Double](nRows)
-    resp(payoffs.argmax) = 1
+    resp(payoffs.argmin) = 1
     resp
   }
   
@@ -77,40 +77,39 @@ class ZeroSumGameColExpert(game: ZeroSumGame, col: Int) extends Expert[ZeroSumGa
   }
 }
 
-class ZeroSumGameSim(A: DenseMatrix[Double]){
-  var eps: Int => Double = t => .1
+class ZeroSumGameSim(A: DenseMatrix[Double], average: Boolean){
+  val eps: Array[Int => Double] = Array(t => .1, t => .1)
   val (nbRows, nbCols) = (A.rows, A.cols)
   val game = new ZeroSumGame(A)
   
   def launch(T: Int) {
     val rowExperts = (0 to nbRows-1).map(new ZeroSumGameRowExpert(game, _)).toList
     val colExperts = (0 to nbCols-1).map(new ZeroSumGameColExpert(game, _)).toList
-    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps, rowExperts, game)
-    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps, colExperts, game)
+    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps(0), rowExperts, game)
+    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps(1), colExperts, game)
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val ys = DenseMatrix.zeros[Double](nbCols, T)
+    val rowNames = (0 to nbRows-1).map("row " + _.toString).toArray
+    val colNames = (0 to nbCols-1).map("column " + _.toString).toArray
     val deltas = DenseMatrix.zeros[Double](1, T)
 
     for (t <- 0 to T - 1) {
       rowAlg.next()
       colAlg.next()
-      val x = rowAlg.strategy
-      val y = colAlg.strategy
-//      val x = game.getAvgRowStrategy
-//      val y = game.getAvgColStrategy
-
+      val x = if(average) game.getAvgRowStrategy else rowAlg.strategy
+      val y = if(average) game.getAvgColStrategy else colAlg.strategy
       deltas(0, t) = game.getDelta(x, y)
       xs(::, t) := x
       ys(::, t) := y
     }
 
-    new Visualizer("t", "mu(t)", "row strategy").plotData(xs)
-    new Visualizer("t", "mu(t)", "col strategy").plotData(ys)
+    new Visualizer("t", "mu(t)", "row strategy").plotData(xs, rowNames)
+    new Visualizer("t", "mu(t)", "col strategy").plotData(ys, colNames)
     new Visualizer("", "", "row strategy").plotStrategies(xs)
     new Visualizer("", "", "col strategy").plotStrategies(ys)
     
-    new Visualizer("t", "mu(t)", "delta").plotData(deltas)
+    new Visualizer("t", "mu(t)", "delta").plotData(deltas, Array("delta"))
     println(deltas(0, T - 1))
   }
 }

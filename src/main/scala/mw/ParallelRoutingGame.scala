@@ -42,7 +42,9 @@ class ParallelRoutingSim(size: Int, totalFlow: Double, val latencies: Array[Doub
 
     val xs = DenseMatrix.zeros[Double](size, T)
     val ls = DenseMatrix.zeros[Double](size, T)
-
+    val xNames = (0 to size - 1).map("flow "+_).toArray
+    val lNames = (0 to size - 1).map("latency "+_).toArray
+    
     for (t <- 0 to T - 1) {
       alg.next()
       val x = game.flows
@@ -52,14 +54,14 @@ class ParallelRoutingSim(size: Int, totalFlow: Double, val latencies: Array[Doub
       ls(::, t) := l
     }
     
-    new Visualizer("t", "mu(t)", "Flow").plotData(xs)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls)
-    new Visualizer("", "", "Strategies").plotStrategies(xs)
+    new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
+    new Visualizer("t", "mu(t)", "Latency").plotData(ls, lNames)
+    new Visualizer("", "", "Strategies").plotStrategies(xs, true)
     
     val latxs = new DenseVector((0 to size-1).map(game.flows(_)).toArray)
     val latys = new DenseVector((0 to size-1).map(game.getLatency(_)).toArray)
     new Visualizer("f", "l(t)", "Latency functions")
-      .plotFunctions(latencies, (0, totalFlow))
+      .plotFunctions(latencies, (0, totalFlow), lNames)
       .plotPoints(latxs, latys)
 
       

@@ -18,10 +18,18 @@ abstract class Expert[N<:Nature](val nature: N) {
 // column response, and it keeps track of the average row and column strategies.
 // In the routing game, it would provide a best response method that computes the
 // shortest path, etc.
-class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N) {
+class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomize: Boolean = false) {
   val support = experts.length
-  val strategy:DenseVector[Double] = DenseVector.fill[Double](support){1./support}
+  
+  def uniformStartegy = DenseVector.fill[Double](support){1./support}
+  def randomStrategy = {
+    val s = DenseVector.rand(support, new scala.util.Random())
+    s/s.norm(1)
+  }
+  val strategy:DenseVector[Double] = if(randomize) randomStrategy else uniformStartegy
+  
   var round = 0
+  
   def next() {
     round += 1
     nature.update(id, strategy)

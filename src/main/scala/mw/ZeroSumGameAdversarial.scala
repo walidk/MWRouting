@@ -21,7 +21,8 @@ class ZeroSumGameAdversarialRowExpert(game: ZeroSumGameAdversarial, row: Int) ex
   }
 }
 
-class ZeroSumGameAdversarialSim(A: DenseMatrix[Double]) {
+// average specifies whether we should plot the average strategy of the last strategy
+class ZeroSumGameAdversarialSim(A: DenseMatrix[Double], average: Boolean) {
   var eps: Int => Double = t => .1
   val game = new ZeroSumGameAdversarial(A)
   val nbRows = A.rows
@@ -32,18 +33,17 @@ class ZeroSumGameAdversarialSim(A: DenseMatrix[Double]) {
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val deltas = DenseMatrix.zeros[Double](1, T)
-
+    val rowNames = (0 to nbRows-1).map("row " + _.toString).toArray
+    
     for (t <- 0 to T - 1) {
       alg.next()
-      val y = game.bestColResponse
-//      val x = game.getAvgRowStrategy()
-      val x = alg.strategy
-
+      val x = if(average) game.getAvgRowStrategy() else alg.strategy
+      val y = game.computeBestColResponse(x)
       deltas(0, t) = game.getDelta(x, y)
       xs(::, t) := x
     }
-    new Visualizer("t", "mu(t)", "Average row strategy").plotData(xs)
-    new Visualizer("t", "mu(t)", "delta").plotData(deltas)
-    new Visualizer("", "", "Strategies").plotStrategies(xs)
+    new Visualizer("t", "mu(t)", "Average row strategy").plotData(xs, rowNames)
+    new Visualizer("t", "mu(t)", "delta").plotData(deltas, Array("delta"))
+    new Visualizer("", "", "Strategies").plotStrategies(xs, true)
   }
 }

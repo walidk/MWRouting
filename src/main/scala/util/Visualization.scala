@@ -10,13 +10,29 @@ class Visualizer(xlabel: String, ylabel: String, title: String) {
   pl.xlabel = xlabel
   pl.ylabel = ylabel
   pl.title = title
-    
-  def plotData(data: DenseMatrix[Double]): Visualizer = {
+  
+  // main plot functions
+  def plotData(xs: DenseVector[Double], ys: DenseVector[Double], name: String = ""): Visualizer = {
+    pl+=plot(xs, ys, name = name)
+    if(!name.isEmpty())
+      pl.legend = true
+    fig.refresh()
+    this
+  }
+  
+  def plotPoints(xs: DenseVector[Double], ys: DenseVector[Double]): Visualizer = {
+    pl+=plot(xs, ys, '.',  "black")
+    fig.refresh()
+    this
+  }
+  
+  // other plot functions
+  def plotData(data: DenseMatrix[Double], names: Array[String]): Visualizer = {
     val xs = linspace(0, data.cols, data.cols)
-    plotData(xs, data)
+    plotData(xs, data, names)
   }
 
-  def plotData(dataArray: Array[DenseMatrix[Double]]): Visualizer = {
+  def plotData(dataArray: Array[DenseMatrix[Double]], names: Array[Array[String]]): Visualizer = {
     val rows = dataArray.map(_.rows).sum
     val cols = dataArray(0).cols
     val data = DenseMatrix.zeros[Double](rows, cols)
@@ -27,33 +43,25 @@ class Visualizer(xlabel: String, ylabel: String, title: String) {
       currentRow += dat.rows
     }
     
-    plotData(data)
+    plotData(data, names.flatten)
   }
   
-  def plotData(xs: DenseVector[Double], data: DenseMatrix[Double]): Visualizer = {
+  def plotData(xs: DenseVector[Double], data: DenseMatrix[Double], names: Array[String]): Visualizer = {
     for(k <- 0 to data.rows-1){
-      pl+=plot(xs, data.t(::, k))
+      plotData(xs, data.t(::, k), names(k))
     }
-    fig.refresh()
     this
   }
   
-  def plotPoints(xs: DenseVector[Double], ys: DenseVector[Double]): Visualizer = {
-    pl+=plot(xs, ys, '+',  "black", "bla", true)
-    fig.refresh()
-    this
-  }
-  
-  def plotFunctions(functions: Array[Double => Double], domain: (Double, Double)): Visualizer = {
+  def plotFunctions(functions: Array[Double => Double], domain: (Double, Double), names: Array[String]): Visualizer = {
     val x = linspace(domain._1, domain._2, 10)
     for(k <- 0 to functions.size-1){
-      pl+=plot(x, x.map(functions(k)))
+      plotData(x, x.map(functions(k)), names(k))
     }
-    fig.refresh()
     this
   }
   
-  def plotStrategies(data: DenseMatrix[Double]): Visualizer = {
+  def plotStrategies(data: DenseMatrix[Double], continuous: Boolean = false): Visualizer = {
     val support = data.rows
     val vertices = DenseMatrix.zeros[Double](2, support)
     for(k<- 0 to support-1){
@@ -64,8 +72,11 @@ class Visualizer(xlabel: String, ylabel: String, title: String) {
     val verticesCycle = DenseMatrix.horzcat(vertices, vertices(0 to 1, 0 to 0))
     val points = (vertices*data)
     
-    plotData(verticesCycle.t(::,0), verticesCycle.t(::,1 to 1).t)
-    plotPoints(points.t(::, 0), points.t(::, 1))
+    plotData(verticesCycle.t(::,0), verticesCycle.t(::,1))
+    if(continuous)
+      plotData(points.t(::, 0), points.t(::, 1))
+    else
+      plotPoints(points.t(::, 0), points.t(::, 1))
     
     fig.refresh()
     this

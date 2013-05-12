@@ -68,7 +68,7 @@ class RoutingGame(totalFlows: Array[Double], network: Network) extends Nature {
 
 }
 
-class RoutingExpert(game: RoutingGame, groupId: Int, pathId: Int) extends Expert[RoutingGame](game) {
+class RoutingExpert(game: RoutingGame, val groupId: Int, val pathId: Int) extends Expert[RoutingGame](game) {
   def nextLoss(): Double = {
     game.getLatency(groupId)(pathId)
   }
@@ -77,30 +77,33 @@ class RoutingExpert(game: RoutingGame, groupId: Int, pathId: Int) extends Expert
 class RoutingGameSim(
   adj: Map[Int, List[(Int, Double => Double)]],
   sourceSinkPairs: Array[(Int, Int)],
-  totalFlows: Array[Double]) {
+  totalFlows: Array[Double], 
+  randomize: Boolean) {
 
   val eps: Array[Int => Double] = Array(t => 10. / (10 + t), t => 10. / (10 + t))
   val graph = DirectedGraph.fromAdjacencyMap(adj)
   val network = new Network(graph, sourceSinkPairs)
   val K = network.nbGroups
-
+  
   def launch(T: Int) {
     val game = new RoutingGame(totalFlows, network)
-
     val experts = new Array[List[RoutingExpert]](K)
     for (k <- 0 to K - 1)
       experts(k) = (0 to network.groupPaths(k).size - 1).map(new RoutingExpert(game, k, _)).toList
 
     val algs = new Array[MWAlgorithm[RoutingGame]](K)
     for (k <- 0 to K - 1)
-      algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game)
+      algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomize)
 
     // simulation
     val xs = new Array[DenseMatrix[Double]](K)
     val ls = new Array[DenseMatrix[Double]](K)
+    val xNames = new Array[Array[String]](K)
     for (k <- 0 to K - 1) {
-      xs(k) = DenseMatrix.zeros[Double](experts(k).length, T)
-      ls(k) = DenseMatrix.zeros[Double](experts(k).length, T)
+      val nbExperts = experts(k).length
+      xs(k) = DenseMatrix.zeros[Double](nbExperts, T)
+      ls(k) = DenseMatrix.zeros[Double](nbExperts, T)
+      xNames(k) = experts(k).map(expert => "("+expert.groupId + ", " + expert.pathId + ")").toArray
     }
 
     for (t <- 0 to T - 1) {
@@ -111,9 +114,9 @@ class RoutingGameSim(
         ls(k)(::, t) := game.getLatencies(k)
       }
     }
-    new Visualizer("t", "mu(t)", "Flow").plotData(xs)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls)
+    new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
+    new Visualizer("t", "mu(t)", "Latency").plotData(ls, xNames)
     for (data <- xs)
-      new Visualizer("", "", "Strategies").plotStrategies(data)
+      new Visualizer("", "", "Strategies").plotStrategies(data, true)
   }
 }
