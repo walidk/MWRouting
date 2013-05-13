@@ -6,10 +6,10 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-//    Sims.launchGraphTest(200)
+    Sims.launchGraphTest(200)
 //    Sims.launchParallelGraphTest(200)
 //    Sims.launchZeroSumGame(2000)
-    Sims.launchZeroSumGameAdversarial(200)
+//    Sims.launchZeroSumGameAdversarial(200)
   }
 }
 
@@ -23,7 +23,8 @@ object Sims {
           x => 2 * (x + 1) * (x + 1) - 1)
     val totalFlow = 2.
     val size = 4
-    val sim = new ParallelRoutingSim(size, totalFlow, latencies)
+    val randomize = true
+    val sim = new ParallelRoutingSim(size, totalFlow, latencies, randomize)
     sim.launch(T)
   }
 
@@ -54,15 +55,17 @@ object Sims {
   // here the column player responds optimally
   // we plot the average strategy
   def launchZeroSumGame(T: Int) {
-    val sim = new ZeroSumGameSim(A, true)
-    sim.eps(0) = t=>10./(10+t)
-    sim.eps(1) = t=>10./(10+t)
+    val randomize = true
+    val sim = new ZeroSumGameSim(A, true, randomize)
+    sim.eps(0) = t=>1./(1+t)
+    sim.eps(1) = t=>1./(1+t)
     sim.launch(T)
   }
 
   def launchZeroSumGameAdversarial(T: Int) {
-    val sim = new ZeroSumGameAdversarialSim(A, true)
-//    sim.eps = t=>1./(10+t)
+    val randomize = true
+    val sim = new ZeroSumGameAdversarialSim(A, true, randomize)
+    sim.eps = t=>10./(10+t)
     sim.launch(T)
   }
 }

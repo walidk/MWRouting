@@ -31,14 +31,18 @@ class ParallelRoutingExpert(game: ParallelRoutingGame, path: Int) extends Expert
   }
 }
 
-class ParallelRoutingSim(size: Int, totalFlow: Double, val latencies: Array[Double => Double]) {
+class ParallelRoutingSim(
+    size: Int, 
+    totalFlow: Double, 
+    val latencies: Array[Double => Double],
+    randomize: Boolean) {
   var eps: Int => Double = t => .1
   val network = new ParallelNetwork(size, latencies)
     
   def launch(T: Int) {
     val game = new ParallelRoutingGame(totalFlow, network)
     val pathExperts = (0 to size-1).map(new ParallelRoutingExpert(game, _)).toList
-    val alg = new MWAlgorithm[ParallelRoutingGame](0, eps, pathExperts, game)
+    val alg = new MWAlgorithm[ParallelRoutingGame](0, eps, pathExperts, game, randomize)
 
     val xs = DenseMatrix.zeros[Double](size, T)
     val ls = DenseMatrix.zeros[Double](size, T)

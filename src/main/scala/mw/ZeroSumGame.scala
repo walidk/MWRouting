@@ -77,7 +77,10 @@ class ZeroSumGameColExpert(game: ZeroSumGame, col: Int) extends Expert[ZeroSumGa
   }
 }
 
-class ZeroSumGameSim(A: DenseMatrix[Double], average: Boolean){
+class ZeroSumGameSim(
+    A: DenseMatrix[Double], 
+    average: Boolean,
+    randomize: Boolean){
   val eps: Array[Int => Double] = Array(t => .1, t => .1)
   val (nbRows, nbCols) = (A.rows, A.cols)
   val game = new ZeroSumGame(A)
@@ -85,8 +88,8 @@ class ZeroSumGameSim(A: DenseMatrix[Double], average: Boolean){
   def launch(T: Int) {
     val rowExperts = (0 to nbRows-1).map(new ZeroSumGameRowExpert(game, _)).toList
     val colExperts = (0 to nbCols-1).map(new ZeroSumGameColExpert(game, _)).toList
-    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps(0), rowExperts, game)
-    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps(1), colExperts, game)
+    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps(0), rowExperts, game, randomize)
+    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps(1), colExperts, game, randomize)
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val ys = DenseMatrix.zeros[Double](nbCols, T)

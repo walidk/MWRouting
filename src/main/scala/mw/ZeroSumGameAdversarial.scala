@@ -22,14 +22,17 @@ class ZeroSumGameAdversarialRowExpert(game: ZeroSumGameAdversarial, row: Int) ex
 }
 
 // average specifies whether we should plot the average strategy of the last strategy
-class ZeroSumGameAdversarialSim(A: DenseMatrix[Double], average: Boolean) {
+class ZeroSumGameAdversarialSim(
+    A: DenseMatrix[Double], 
+    average: Boolean,
+    randomize: Boolean) {
   var eps: Int => Double = t => .1
   val game = new ZeroSumGameAdversarial(A)
   val nbRows = A.rows
 
   def launch(T: Int) {
     val experts = (0 to nbRows - 1).map(new ZeroSumGameAdversarialRowExpert(game, _)).toList
-    val alg = new MWAlgorithm[ZeroSumGameAdversarial](0, eps, experts, game)
+    val alg = new MWAlgorithm[ZeroSumGameAdversarial](0, eps, experts, game, randomize)
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val deltas = DenseMatrix.zeros[Double](1, T)
@@ -38,7 +41,7 @@ class ZeroSumGameAdversarialSim(A: DenseMatrix[Double], average: Boolean) {
     for (t <- 0 to T - 1) {
       alg.next()
       val x = if(average) game.getAvgRowStrategy() else alg.strategy
-      val y = game.computeBestColResponse(x)
+      val y = if(average) game.getAvgColStrategy() else game.bestColResponse 
       deltas(0, t) = game.getDelta(x, y)
       xs(::, t) := x
     }
