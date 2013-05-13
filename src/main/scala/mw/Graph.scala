@@ -27,18 +27,18 @@ case class Node(id: Int) {
 class DirectedGraph {
   val nodes = HashMap[Int, Node]()
   val edges = HashMap[Int, Edge]()
-  var nbEdges = 0
+  var edgeId = 0
   
   def addNode(node: Node) {
     nodes += (node.id->node)
   }
   
   def addEdge(from: Node, to: Node, latency: Double=>Double) {
-    val edge = Edge(nbEdges, from, to, latency)
-    edges += nbEdges->edge
-    from.outEdges += (to.id->edge)
-    to.inEdges += (from.id->edge)
-    nbEdges+=1
+    val edge = Edge(edgeId, from, to, latency)
+    edges += edgeId->edge
+    from.outEdges += (edgeId->edge)
+    to.inEdges += (edgeId->edge)
+    edgeId+=1
   }
   
   override def toString(): String = {
@@ -62,10 +62,7 @@ class DirectedGraph {
     }
     findPathsRec(nodes(sourceId), new IntSet()).toList.map(Path(_))
   }
-  
 }
-
-
 
 object DirectedGraph{
   def fromAdjacencyMap(adj: Map[Int, List[(Int, Double=>Double)]]): DirectedGraph = {

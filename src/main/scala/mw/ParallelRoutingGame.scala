@@ -2,72 +2,41 @@ package mw
 import breeze.linalg._
 import util.Visualizer
 
-class ParallelNetwork(val size: Int, latencies: Array[Double => Double]) {
-  def getLatency(flows: DenseVector[Double])(path: Int): Double = 
-    latencies(path)(flows(path))
-}
-
-class ParallelRoutingGame(totalFlow: Double, network: ParallelNetwork) extends Nature {
-  var flows: DenseVector[Double] = DenseVector.zeros[Double](network.size)
-  val size = network.size
-  def getLatency(path: Int) = network.getLatency(flows)(path)
-  
-  def getLatencies() = new DenseVector[Double]((0 to size-1).map(getLatency).toArray)
-  
-  def getDelta(flows: DenseVector[Double]) = {
-    val latencies = (0 to size-1).map(getLatency)
-    latencies.max - latencies.min 
-  }
-  
-  def update(id: Int, strategy: DenseVector[Double]) = {
-    flows = strategy * totalFlow
-  }
-  
-}
-
-class ParallelRoutingExpert(game: ParallelRoutingGame, path: Int) extends Expert[ParallelRoutingGame](game) {
-  def nextLoss(): Double = {
-    game.getLatency(path)
-  }
-}
-
 class ParallelRoutingSim(
-    size: Int, 
     totalFlow: Double, 
     val latencies: Array[Double => Double],
     randomize: Boolean) {
+  val size = latencies.size
   var eps: Int => Double = t => .1
-  val network = new ParallelNetwork(size, latencies)
-    
+  val adj = Map(0->latencies.toList.map(lat => (1, lat)))+(1->Nil)
+  
+  val graph = DirectedGraph.fromAdjacencyMap(adj)
+  val network = new Network(graph, Array((0, 1)))
+  
   def launch(T: Int) {
-    val game = new ParallelRoutingGame(totalFlow, network)
-    val pathExperts = (0 to size-1).map(new ParallelRoutingExpert(game, _)).toList
-    val alg = new MWAlgorithm[ParallelRoutingGame](0, eps, pathExperts, game, randomize)
+    val game = new RoutingGame(Array(totalFlow), network)
+    val experts = (0 to size-1).map(new RoutingExpert(game, 0, _)).toList
 
+    val alg = new MWAlgorithm[RoutingGame](0, eps, experts, game, randomize)
+
+    // simulation
     val xs = DenseMatrix.zeros[Double](size, T)
     val ls = DenseMatrix.zeros[Double](size, T)
-    val xNames = (0 to size - 1).map("flow "+_).toArray
-    val lNames = (0 to size - 1).map("latency "+_).toArray
+    val xNames = (0 to size - 1).map("path "+_).toArray
     
     for (t <- 0 to T - 1) {
       alg.next()
-      val x = game.flows
-      val l = game.getLatencies
-      //      deltas(0, t) = game.getDelta(x)
-      xs(::, t) := x
-      ls(::, t) := l
+      xs(::, t) := game.pathFlows(0)
+      ls(::, t) := game.getLatencies(0)
     }
-    
     new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls, lNames)
-    new Visualizer("", "", "Strategies").plotStrategies(xs, true)
-    
-    val latxs = new DenseVector((0 to size-1).map(game.flows(_)).toArray)
-    val latys = new DenseVector((0 to size-1).map(game.getLatency(_)).toArray)
-    new Visualizer("f", "l(t)", "Latency functions")
-      .plotFunctions(latencies, (0, totalFlow), lNames)
-      .plotPoints(latxs, latys)
-
+    new Visualizer("t", "mu(t)", "Latency").plotData(ls, xNames)
+    new Visualizer("", "", "Strategies").plotStrategies(xs/totalFlow, true)
       
+    val latxs = new DenseVector((0 to size-1).map(game.pathFlows(0)(_)).toArray)
+    val latys = new DenseVector((0 to size-1).map(game.getLatency(0)(_)).toArray)
+    new Visualizer("f", "l(t)", "Latency functions")
+      .plotFunctions(latencies, (0, totalFlow), xNames)
+      .plotPoints(latxs, latys)
   }
 }

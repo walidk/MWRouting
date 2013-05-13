@@ -116,7 +116,7 @@ class RoutingGameSim(
     }
     new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
     new Visualizer("t", "mu(t)", "Latency").plotData(ls, xNames)
-    for (data <- xs)
-      new Visualizer("", "", "Strategies").plotStrategies(data, true)
+    for (k <- 0 to K-1)
+      new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
   }
 }

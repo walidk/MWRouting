@@ -22,9 +22,8 @@ object Sims {
           x => x * x, 
           x => 2 * (x + 1) * (x + 1) - 1)
     val totalFlow = 2.
-    val size = 4
     val randomize = true
-    val sim = new ParallelRoutingSim(size, totalFlow, latencies, randomize)
+    val sim = new ParallelRoutingSim(totalFlow, latencies, randomize)
     sim.launch(T)
   }
 
