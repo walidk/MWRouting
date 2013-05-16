@@ -95,15 +95,21 @@ class RoutingGameSim(
     for (k <- 0 to K - 1)
       algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomize)
 
+      
+    def pathToString(edgeList: List[Int]): String = edgeList match {
+      case Nil => ""
+      case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
+      case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
+    }  
     // simulation
     val xs = new Array[DenseMatrix[Double]](K)
     val ls = new Array[DenseMatrix[Double]](K)
-    val xNames = new Array[Array[String]](K)
+    val names = new Array[Array[String]](K)
     for (k <- 0 to K - 1) {
       val nbExperts = experts(k).length
       xs(k) = DenseMatrix.zeros[Double](nbExperts, T)
       ls(k) = DenseMatrix.zeros[Double](nbExperts, T)
-      xNames(k) = experts(k).map(expert => "("+expert.groupId + ", " + expert.pathId + ")").toArray
+      names(k) = network.groupPaths(k).map(pathToString)
     }
 
     for (t <- 0 to T - 1) {
@@ -114,8 +120,8 @@ class RoutingGameSim(
         ls(k)(::, t) := game.getLatencies(k)
       }
     }
-    new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls, xNames)
+    new Visualizer("t", "mu(t)", "Flow").plotData(xs, names)
+    new Visualizer("t", "mu(t)", "Latency").plotData(ls, names)
     for (k <- 0 to K-1)
       new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
   }

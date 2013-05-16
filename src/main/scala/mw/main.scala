@@ -6,14 +6,14 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-    Sims.launchGraphTest(200)
-//    Sims.launchParallelGraphTest(200)
-//    Sims.launchZeroSumGame(2000)
-//    Sims.launchZeroSumGameAdversarial(200)
+    Simulations.launchGraphTest(200)
+//    Simulations.launchParallelGraphTest(200)
+//    Simulations.launchZeroSumGame(2000)
+//    Simulations.launchZeroSumGameAdversarial(200)
   }
 }
 
-object Sims {
+object Simulations {
   def launchParallelGraphTest(T: Int) {
     val latencies: Array[Double => Double] = 
       Array(
@@ -43,8 +43,8 @@ object Sims {
     val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomize)
     sim.eps(0) = t=>.2
     sim.eps(1) = t=>.2
-//    sim.eps(0) = t=>100./(10+t)
-//    sim.eps(1) = t=>100./(10+t)
+//    sim.eps(0) = t=>10./(10+t)
+//    sim.eps(1) = t=>10./(10+t)
     sim.launch(T)
   }
 
