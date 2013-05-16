@@ -6,7 +6,7 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-    Simulations.launchGraphTest(200)
+    Simulations.launchGraphTest(1000)
 //    Simulations.launchParallelGraphTest(200)
 //    Simulations.launchZeroSumGame(2000)
 //    Simulations.launchZeroSumGameAdversarial(200)
@@ -29,7 +29,7 @@ object Simulations {
 
   def launchGraphTest(T: Int) {
     val adj: Map[Int, List[(Int, Double => Double)]] = Map(
-      0 -> List((1, x => x * x+.5), (4, x => x / 2)),
+      0 -> List((1, x => x * x+1.5), (4, x => x / 2)),
       1 -> List(),
       2 -> List((3, x => x), (4, x => .5)),
       3 -> List(),
@@ -41,10 +41,13 @@ object Simulations {
     val randomize = true
     
     val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomize)
-    sim.eps(0) = t=>.2
-    sim.eps(1) = t=>.2
-//    sim.eps(0) = t=>10./(10+t)
-//    sim.eps(1) = t=>10./(10+t)
+    sim.eps(0) = t=>1.
+    sim.eps(1) = t=>1.
+//    sim.eps(0) = t=>1./math.sqrt(t)
+//    sim.eps(1) = t=>1./math.sqrt(t)
+//    sim.eps(0) = t=>1./t
+//    sim.eps(1) = t=>1./t
+    
     sim.launch(T)
   }
 

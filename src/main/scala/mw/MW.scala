@@ -16,8 +16,8 @@ abstract class Expert[N<:Nature](val nature: N) {
 // nature keeps extra information specific to the particular game being played.
 // for example, if nature is a ZeroSumGame, it provides methods to compute best
 // column response, and it keeps track of the average row and column strategies.
-// In the routing game, it would provide a best response method that computes the
-// shortest path, etc.
+// In the max congestion game, nature would provide a best response method that computes 
+// the shortest path, etc.
 class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomize: Boolean = false) {
   val support = experts.length
   

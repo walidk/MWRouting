@@ -104,11 +104,13 @@ class RoutingGameSim(
     // simulation
     val xs = new Array[DenseMatrix[Double]](K)
     val ls = new Array[DenseMatrix[Double]](K)
+    val avgLs = new Array[DenseMatrix[Double]](K)
     val names = new Array[Array[String]](K)
     for (k <- 0 to K - 1) {
       val nbExperts = experts(k).length
       xs(k) = DenseMatrix.zeros[Double](nbExperts, T)
       ls(k) = DenseMatrix.zeros[Double](nbExperts, T)
+      avgLs(k) = DenseMatrix.zeros[Double](nbExperts, T)
       names(k) = network.groupPaths(k).map(pathToString)
     }
 
@@ -118,10 +120,18 @@ class RoutingGameSim(
       for (k <- 0 to K - 1) {
         xs(k)(::, t) := game.pathFlows(k)
         ls(k)(::, t) := game.getLatencies(k)
+        val alpha = t.doubleValue/(t+1)
+        avgLs(k)(::, t) := 
+          {if(t == 0)
+            ls(k)(::, t)
+          else
+            avgLs(k)(::, t-1)*alpha + ls(k)(::, t)*(1-alpha)
+          }
       }
     }
     new Visualizer("t", "mu(t)", "Flow").plotData(xs, names)
     new Visualizer("t", "mu(t)", "Latency").plotData(ls, names)
+    new Visualizer("t", "mu(t)", "Average Latency").plotData(avgLs, names)
     for (k <- 0 to K-1)
       new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
   }
