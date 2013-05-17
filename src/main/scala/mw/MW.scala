@@ -18,15 +18,15 @@ abstract class Expert[N<:Nature](val nature: N) {
 // column response, and it keeps track of the average row and column strategies.
 // In the max congestion game, nature would provide a best response method that computes 
 // the shortest path, etc.
-class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomize: Boolean = false) {
-  val support = experts.length
+class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomizedStart: Boolean = false) {
+  val nbExperts = experts.length
   
-  def uniformStartegy = DenseVector.fill[Double](support){1./support}
+  def uniformStartegy = DenseVector.fill[Double](nbExperts){1./nbExperts}
   def randomStrategy = {
-    val s = DenseVector.rand(support, new scala.util.Random())
+    val s = DenseVector.rand(nbExperts, new scala.util.Random())
     s/s.norm(1)
   }
-  val strategy:DenseVector[Double] = if(randomize) randomStrategy else uniformStartegy
+  val strategy:DenseVector[Double] = if(randomizedStart) randomStrategy else uniformStartegy
   
   var round = 0
   
