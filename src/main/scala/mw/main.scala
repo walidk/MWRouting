@@ -38,13 +38,13 @@ object Simulations {
       6 -> List((1, x => x*x / 2), (3, x => x)))
     val sourceSinks = Array((0, 1), (2, 3))
     val totalFlows = Array(1., 1.)
-    val randomize = true
+    val randomize = false
     
     val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomize)
-    sim.eps(0) = t=>1.
-    sim.eps(1) = t=>1.
-//    sim.eps(0) = t=>1./math.sqrt(t)
-//    sim.eps(1) = t=>1./math.sqrt(t)
+//    sim.eps(0) = t=>1.
+//    sim.eps(1) = t=>1.
+    sim.eps(0) = t=>1./math.sqrt(t)
+    sim.eps(1) = t=>1./math.sqrt(t)
 //    sim.eps(0) = t=>1./t
 //    sim.eps(1) = t=>1./t
     

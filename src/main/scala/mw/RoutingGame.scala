@@ -6,6 +6,7 @@ import util.Visualizer
 
 class Network(graph: DirectedGraph, val groupSourceSinks: Array[(Int, Int)]) {
   val edges = graph.edges
+  val nbNodes = graph.nodes.size
   val nbEdges = edges.size
   val nbGroups = groupSourceSinks.size
   val groupPaths: Array[Array[List[Int]]] =
@@ -66,9 +67,27 @@ class RoutingGame(totalFlows: Array[Double], network: Network) extends Nature {
     }
   }
 
+  def toJSON() : String = {
+    var content = new String()
+    content = "{ \"nodes\":[ \n"
+    for (id <- 0 to network.nbNodes - 1) {
+      var cat = 0
+      for (k <- 0 to nbGroups -1) {
+        cat = if ( (network.groupSourceSinks(k)._1 == id) || (network.groupSourceSinks(k)._2 == id) ) k+1 else cat
+      }
+      content += "{\"name\":"+ id +", \"group\":"+ cat +"},\n"
+    }
+    content = content.substring(0, content.length()-2) + "], \n \"links\":[ \n"
+    for (edgeId <- 0 to nbEdges - 1) {
+      content += "{\"source\":" + network.edges(edgeId).from.id + ", \"target\":" + network.edges(edgeId).to.id + ", \"value\":" + edgeLatencies(edgeId) + "},\n"
+    }
+    content = content.substring(0, content.length()-2) + "] }"
+    content
+  }
+  
 }
 
-class RoutingExpert(game: RoutingGame, val groupId: Int, val pathId: Int) extends Expert[RoutingGame](game) {
+class RoutingExpert(game: RoutingGame, val groupId: Int, val pathId: Int) extends Expert(game) {
   def nextLoss(): Double = {
     game.getLatency(groupId)(pathId)
   }
@@ -129,10 +148,13 @@ class RoutingGameSim(
           }
       }
     }
+    
+    System.out.println(game.toJSON())
     new Visualizer("t", "mu(t)", "Flow").plotData(xs, names)
     new Visualizer("t", "mu(t)", "Latency").plotData(ls, names)
     new Visualizer("t", "mu(t)", "Average Latency").plotData(avgLs, names)
     for (k <- 0 to K-1)
       new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
+      
   }
 }

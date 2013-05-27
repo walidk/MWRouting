@@ -79,5 +79,4 @@ object DirectedGraph{
     }
     graph
   }
-  
 }
