@@ -6,8 +6,8 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-    Simulations.launchGraphTest(1000)
-//    Simulations.launchParallelGraphTest(200)
+//    Simulations.launchGraphTest(200)
+    Simulations.launchParallelGraphTest(200)
 //    Simulations.launchZeroSumGame(2000)
 //    Simulations.launchZeroSumGameAdversarial(200)
   }
@@ -22,31 +22,39 @@ object Simulations {
           x => x * x, 
           x => 2 * (x + 1) * (x + 1) - 1)
     val totalFlow = 2.
-    val randomize = true
-    val sim = new ParallelRoutingSim(totalFlow, latencies, randomize)
+    val randomizedStart = true
+    val sim = new ParallelRoutingSim(totalFlow, latencies, randomizedStart)
+    sim.eps = t=>.1
     sim.launch(T)
   }
 
-  def launchGraphTest(T: Int) {
+  def launchGraphTest(T: Int) { 
     val adj: Map[Int, List[(Int, Double => Double)]] = Map(
-      0 -> List((1, x => x * x+1.5), (4, x => x / 2)),
+      0 -> List((1, x => x*x+2.5), (4, x => x / 2)),
       1 -> List(),
-      2 -> List((3, x => x), (4, x => .5)),
-      3 -> List(),
+      2 -> List((3, x => x+1.), (4, x => .5)),
+      3 -> List((8, x=>1)),
       4 -> List((5, x => 3 * x * x), (6, x => x*x*x)),
       5 -> List((1, x => x / 3), (3, x => x/4)), 
-      6 -> List((1, x => x*x / 2), (3, x => x)))
-    val sourceSinks = Array((0, 1), (2, 3))
-    val totalFlows = Array(1., 1.)
-    val randomize = false
+      6 -> List((1, x => x*x / 2), (3, x => x)),
+      7 -> List((2, x => x*x / 2)),
+      8 -> List()
+      )
     
-    val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomize)
-//    sim.eps(0) = t=>1.
-//    sim.eps(1) = t=>1.
-    sim.eps(0) = t=>1./math.sqrt(t)
-    sim.eps(1) = t=>1./math.sqrt(t)
-//    sim.eps(0) = t=>1./t
-//    sim.eps(1) = t=>1./t
+    val sourceSinks = Array((0, 1), (2, 3), (7, 8))
+    val totalFlows = Array(1., 1., 1.)
+    val randomizedStart = true
+    
+    val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomizedStart)
+    val eps = (t:Int)=>
+//      .1
+//      .5
+//      .8
+      10./(10+t)
+//      1./math.sqrt(t)
+    sim.eps(0) = eps
+    sim.eps(1) = eps
+    sim.eps(2) = eps
     
     sim.launch(T)
   }

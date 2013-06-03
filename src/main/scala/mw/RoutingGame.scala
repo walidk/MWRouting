@@ -97,12 +97,13 @@ class RoutingGameSim(
   adj: Map[Int, List[(Int, Double => Double)]],
   sourceSinkPairs: Array[(Int, Int)],
   totalFlows: Array[Double], 
-  randomize: Boolean) {
+  randomizedStart: Boolean) {
 
-  val eps: Array[Int => Double] = Array(t => 10. / (10 + t), t => 10. / (10 + t))
+  var singleStrategyPlot = false
   val graph = DirectedGraph.fromAdjacencyMap(adj)
   val network = new Network(graph, sourceSinkPairs)
   val K = network.nbGroups
+  val eps: Array[Int => Double] = (0 to K-1).map(k=> (t:Int) => 10. / (10 + t)).toArray
   
   def launch(T: Int) {
     val game = new RoutingGame(totalFlows, network)
@@ -112,7 +113,7 @@ class RoutingGameSim(
 
     val algs = new Array[MWAlgorithm[RoutingGame]](K)
     for (k <- 0 to K - 1)
-      algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomize)
+      algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomizedStart)
 
       
     def pathToString(edgeList: List[Int]): String = edgeList match {
@@ -120,6 +121,7 @@ class RoutingGameSim(
       case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
       case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
     }  
+    
     // simulation
     val xs = new Array[DenseMatrix[Double]](K)
     val ls = new Array[DenseMatrix[Double]](K)
@@ -153,8 +155,14 @@ class RoutingGameSim(
     new Visualizer("t", "mu(t)", "Flow").plotData(xs, names)
     new Visualizer("t", "mu(t)", "Latency").plotData(ls, names)
     new Visualizer("t", "mu(t)", "Average Latency").plotData(avgLs, names)
-    for (k <- 0 to K-1)
-      new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
+    
+    if(singleStrategyPlot){
+      val strategyVis = new Visualizer("", "", "Strategies")
+      (0 to K-1).toList.foldLeft(strategyVis)((vis, k)=>vis.plotStrategies(xs(k)/totalFlows(k), true))
+    }else{
+      for (k <- 0 to K-1)
+        new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
+    }
       
   }
 }
