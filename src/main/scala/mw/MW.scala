@@ -36,9 +36,7 @@ abstract class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: Li
   def next() {
     round += 1
     val losses = new DenseVector[Double](experts.map(_.nextLoss).toArray)
-    println(losses)
     val weights = updateRule(losses)
-    println(weights)
     strategy :*= weights
     strategy :/= strategy.norm(1)
     
@@ -61,7 +59,6 @@ class MultilinearMWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: 
   extends MWAlgorithm[N](id, epsilon, experts, nature, randomizedStart) {
   def updateRule(losses: DenseVector[Double]) = {
     val avgLoss = sum(strategy :* losses)
-    println(avgLoss)
     losses.map(loss => 1+epsilon(round)*(avgLoss - loss))
   }
 }
