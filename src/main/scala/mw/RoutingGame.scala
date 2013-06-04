@@ -113,7 +113,7 @@ class RoutingGameSim(
 
     val algs = new Array[MWAlgorithm[RoutingGame]](K)
     for (k <- 0 to K - 1)
-      algs(k) = new MWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomizedStart)
+      algs(k) = new MultilinearMWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomizedStart)
 
       
     def pathToString(edgeList: List[Int]): String = edgeList match {

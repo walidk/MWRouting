@@ -88,8 +88,8 @@ class ZeroSumGameSim(
   def launch(T: Int) {
     val rowExperts = (0 to nbRows-1).map(new ZeroSumGameRowExpert(game, _)).toList
     val colExperts = (0 to nbCols-1).map(new ZeroSumGameColExpert(game, _)).toList
-    val rowAlg = new MWAlgorithm[ZeroSumGame](0, eps(0), rowExperts, game, randomize)
-    val colAlg = new MWAlgorithm[ZeroSumGame](1, eps(1), colExperts, game, randomize)
+    val rowAlg = new ExponentialMWAlgorithm[ZeroSumGame](0, eps(0), rowExperts, game, randomize)
+    val colAlg = new ExponentialMWAlgorithm[ZeroSumGame](1, eps(1), colExperts, game, randomize)
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val ys = DenseMatrix.zeros[Double](nbCols, T)

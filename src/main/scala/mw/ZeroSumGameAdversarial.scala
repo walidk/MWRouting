@@ -32,7 +32,7 @@ class ZeroSumGameAdversarialSim(
 
   def launch(T: Int) {
     val experts = (0 to nbRows - 1).map(new ZeroSumGameAdversarialRowExpert(game, _)).toList
-    val alg = new MWAlgorithm[ZeroSumGameAdversarial](0, eps, experts, game, randomize)
+    val alg = new ExponentialMWAlgorithm[ZeroSumGameAdversarial](0, eps, experts, game, randomize)
 
     val xs = DenseMatrix.zeros[Double](nbRows, T)
     val deltas = DenseMatrix.zeros[Double](1, T)

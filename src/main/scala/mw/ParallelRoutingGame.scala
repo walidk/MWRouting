@@ -17,7 +17,7 @@ class ParallelRoutingSim(
     val game = new RoutingGame(Array(totalFlow), network)
     val experts = (0 to size-1).map(new RoutingExpert(game, 0, _)).toList
 
-    val alg = new MWAlgorithm[RoutingGame](0, eps, experts, game, randomize)
+    val alg = new ExponentialMWAlgorithm[RoutingGame](0, eps, experts, game, randomize)
 
     // simulation
     val xs = DenseMatrix.zeros[Double](size, T)
@@ -36,7 +36,7 @@ class ParallelRoutingSim(
     val latxs = new DenseVector((0 to size-1).map(game.pathFlows(0)(_)).toArray)
     val latys = new DenseVector((0 to size-1).map(game.getLatency(0)(_)).toArray)
     new Visualizer("f", "l(t)", "Latency functions")
-      .plotFunctions(latencies, (0, totalFlow), xNames)
+      .plotFunctions(latencies, (0, totalFlow), xNames) // can add one last argument here to specify number of points to plot
       .plotPoints(latxs, latys)
   }
 }

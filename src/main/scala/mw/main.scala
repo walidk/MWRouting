@@ -6,8 +6,8 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-//    Simulations.launchGraphTest(200)
-    Simulations.launchParallelGraphTest(200)
+    Simulations.launchGraphTest(200)
+//    Simulations.launchParallelGraphTest(200)
 //    Simulations.launchZeroSumGame(2000)
 //    Simulations.launchZeroSumGameAdversarial(200)
   }
@@ -47,10 +47,10 @@ object Simulations {
     
     val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, randomizedStart)
     val eps = (t:Int)=>
-//      .1
+      .1
 //      .5
 //      .8
-      10./(10+t)
+//      1./(10+t)
 //      1./math.sqrt(t)
     sim.eps(0) = eps
     sim.eps(1) = eps

@@ -53,8 +53,8 @@ class Visualizer(xlabel: String, ylabel: String, title: String) {
     this
   }
   
-  def plotFunctions(functions: Array[Double => Double], domain: (Double, Double), names: Array[String]): Visualizer = {
-    val x = linspace(domain._1, domain._2, 10)
+  def plotFunctions(functions: Array[Double => Double], domain: (Double, Double), names: Array[String], nbPoints: Int = 100): Visualizer = {
+    val x = linspace(domain._1, domain._2, nbPoints)
     for(k <- 0 to functions.size-1){
       plotData(x, x.map(functions(k)), names(k))
     }

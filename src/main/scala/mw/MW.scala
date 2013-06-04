@@ -18,7 +18,7 @@ abstract class Expert[N<:Nature](val nature: N) {
 // column response, and it keeps track of the average row and column strategies.
 // In the max congestion game, nature would provide a best response method that computes 
 // the shortest path, etc.
-class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomizedStart: Boolean = false) {
+abstract class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], val nature: N, val randomizedStart: Boolean = false) {
   val nbExperts = experts.length
   
   def uniformStartegy = DenseVector.fill[Double](nbExperts){1./nbExperts}
@@ -29,12 +29,39 @@ class MWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert
   val strategy:DenseVector[Double] = if(randomizedStart) randomStrategy else uniformStartegy
   
   var round = 0
+  nature.update(id, strategy)
+  
+  def updateRule(losses: DenseVector[Double]): DenseVector[Double]
   
   def next() {
     round += 1
-    nature.update(id, strategy)
-    val weights = new DenseVector[Double](experts.map(_.nextLoss).map(l => math.exp(-epsilon(round)*l)).toArray)
+    val losses = new DenseVector[Double](experts.map(_.nextLoss).toArray)
+    println(losses)
+    val weights = updateRule(losses)
+    println(weights)
     strategy :*= weights
     strategy :/= strategy.norm(1)
+    
+    nature.update(id, strategy)
+  }
+}
+
+
+class ExponentialMWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], nature: N, randomizedStart: Boolean = false) 
+  extends MWAlgorithm[N](id, epsilon, experts, nature, randomizedStart) {
+  def updateRule(losses: DenseVector[Double]) = losses.map(loss => math.exp(-epsilon(round)*loss))
+}
+
+class PolyMWAlgorithm[N<:Nature](pow: Double, id: Int, epsilon: Int=>Double, experts: List[Expert[N]], nature: N, randomizedStart: Boolean = false) 
+  extends MWAlgorithm[N](id, epsilon, experts, nature, randomizedStart) {
+  def updateRule(losses: DenseVector[Double]) = losses.map(loss => epsilon(round)/math.pow(loss, pow))
+}
+
+class MultilinearMWAlgorithm[N<:Nature](id: Int, epsilon: Int=>Double, experts: List[Expert[N]], nature: N, randomizedStart: Boolean = false) 
+  extends MWAlgorithm[N](id, epsilon, experts, nature, randomizedStart) {
+  def updateRule(losses: DenseVector[Double]) = {
+    val avgLoss = sum(strategy :* losses)
+    println(avgLoss)
+    losses.map(loss => 1+epsilon(round)*(avgLoss - loss))
   }
 }
