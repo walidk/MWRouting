@@ -86,7 +86,7 @@ case class PolyUpdate(exponent: Double) extends UpdateRule
 case class FollowTheMeanUpdate() extends UpdateRule
 
 class MWAlgorithm(
-    val epsilon: Int => Double, 
+    var epsilon: Int => Double, 
     val experts: Array[Expert],
     val updateRule: UpdateRule) {
   

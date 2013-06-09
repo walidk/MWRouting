@@ -123,26 +123,28 @@ class RoutingGameSim(
   updateRule: UpdateRule,
   randomizedStart: Boolean) {
 
-  val graph = DirectedGraph.fromAdjacencyMap(adj)
-  val network = new Network(graph, sourceSinkPairs)
+  private val graph = DirectedGraph.fromAdjacencyMap(adj)
+  private val network = new Network(graph, sourceSinkPairs)
   // this default value will only be used for initialization. Van change it later
   val defaultEpsilon = (t:Int) => 10. / (10 + t)
   
-  val game = new RoutingGame(totalFlows, network)
-  val algorithms = sourceSinkPairs.indices.toArray.map(groupId => {
+  private val game = new RoutingGame(totalFlows, network)
+  
+  val algorithms = new Array[MWAlgorithm](sourceSinkPairs.length)
+  for(groupId <- sourceSinkPairs.indices) {
     val experts: Array[Expert] = 
       for(pathId <- network.pathsArray(groupId).indices.toArray) 
         yield RoutingExpert(groupId, pathId)
-    new MWAlgorithm(defaultEpsilon, experts, updateRule)
-  })
+    algorithms(groupId) = new MWAlgorithm(defaultEpsilon, experts, updateRule)
+  }
   
-  def pathToString(edgeList: List[Int]): String = edgeList match {
+  private def pathToString(edgeList: List[Int]): String = edgeList match {
     case Nil => ""
     case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
     case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
   }
-  val legend = network.pathsArray.map(paths => paths.map(pathToString))
   
+  val legend = network.pathsArray.map(paths => paths.map(pathToString))
   val coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
   val strategies = coordinator.strategiesStream
   val flows = coordinator.natureStateStream.map(_.pathFlows)
