@@ -3,40 +3,20 @@ import breeze.linalg._
 import util.Visualizer
 
 class ParallelRoutingSim(
+    val latencyFunctions: Array[Double => Double],
     totalFlow: Double, 
-    val latencies: Array[Double => Double],
-    randomize: Boolean) {
-  val size = latencies.size
-  var eps: Int => Double = t => .1
-  val adj = Map(0->latencies.toList.map(lat => (1, lat)))+(1->Nil)
-  
-  val graph = DirectedGraph.fromAdjacencyMap(adj)
-  val network = new Network(graph, Array((0, 1)))
-  
-  def launch(T: Int) {
-    val game = new RoutingGame(Array(totalFlow), network)
-    val experts = (0 to size-1).map(new RoutingExpert(game, 0, _)).toList
-
-    val alg = new ExponentialMWAlgorithm[RoutingGame](0, eps, experts, game, randomize)
-
-    // simulation
-    val xs = DenseMatrix.zeros[Double](size, T)
-    val ls = DenseMatrix.zeros[Double](size, T)
-    val xNames = (0 to size - 1).map("path "+_).toArray
-    
-    for (t <- 0 to T - 1) {
-      alg.next()
-      xs(::, t) := game.pathFlows(0)
-      ls(::, t) := game.getLatencies(0)
-    }
-    new Visualizer("t", "mu(t)", "Flow").plotData(xs, xNames)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls, xNames)
-    new Visualizer("", "", "Strategies").plotStrategies(xs/totalFlow, true)
-      
-    val latxs = new DenseVector((0 to size-1).map(game.pathFlows(0)(_)).toArray)
-    val latys = new DenseVector((0 to size-1).map(game.getLatency(0)(_)).toArray)
-    new Visualizer("f", "l(t)", "Latency functions")
-      .plotFunctions(latencies, (0, totalFlow), xNames) // can add one last argument here to specify number of points to plot
-      .plotPoints(latxs, latys)
+    updateRule: UpdateRule,
+    randomizedStart: Boolean) extends 
+  RoutingGameSim(
+    adj = Map(0->latencyFunctions.toList.map(lat => (1, lat)))+(1->Nil), 
+    sourceSinkPairs = Array((0, 1)),
+    totalFlows = Array(totalFlow),
+    updateRule,
+    randomizedStart) {
+  override def runFor(T:  Int) {
+    import Visualizer._ // for implicit conversions
+    super.runFor(T)
+    Visualizer.plotFunctions(latencyFunctions, (0, totalFlow), "f", "l(f)", "Latency functions", 100)
   }
+
 }

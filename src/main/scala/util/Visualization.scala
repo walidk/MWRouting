@@ -3,83 +3,88 @@ package util
 import breeze.plot._
 import breeze.linalg._
 
-class Visualizer(xlabel: String, ylabel: String, title: String) {
-  val fig = Figure()
+// Companion object
+object Visualizer {
+  def plotLineGroups(
+      linesStream: Stream[Array[DenseVector[Double]]],
+      xLabel: String,
+      yLabel: String,
+      title: String,
+      legend: Array[Array[String]]) {
+    val vis = new Visualizer(title)
+    val lineGroups = linesStream.map(_.map(_.toArray))
+    for((lineGroup, i) <-lineGroups.transpose zipWithIndex; 
+        pl = vis.fig.subplot(i+1, 1, i);
+        (line, leg) <- lineGroup.transpose zip legend(i)) {
+      vis.addLine(pl, line, leg)
+    }
+  }
+  
+  def plotFunctions(
+      functions: Array[Double => Double], 
+      domain: (Double, Double), 
+      xLabel: String, 
+      yLabel: String, 
+      title: String, 
+      nbPoints: Int = 100) {
+    val vis = new Visualizer(title)
+    val pl = vis.fig.subplot(0)
+    val xs = linspace(domain._1, domain._2, nbPoints).toArray.toStream
+    for (f <- functions)
+      vis.addLine(pl, xs, xs map f)
+  }
+
+  def plotStrategies(
+      strategies: Stream[Array[DenseVector[Double]]],  
+      usePoints: Boolean = false) {
+    val vis = new Visualizer("Strategies")
+    val fig = vis.fig
+    val support = strategies.head.length
+    val verticesx = new Array[Double](support)
+    val verticesy = new Array[Double](support)
+    for (k <- 0 to support - 1) {
+      val theta = k * 2 * math.Pi / support
+      verticesx(k) = math.cos(theta)
+      verticesy(k) = math.sin(theta)
+    }
+ 
+    for ((st, i) <- strategies.transpose zipWithIndex) {
+      val pl = fig.subplot(1, i+1, i)
+      val pointsx = st.map(_ dot DenseVector(verticesx))
+      val pointsy = st.map(_ dot DenseVector(verticesy))
+      vis.addLine(pl, verticesx.toStream ++ verticesx.take(1), verticesy.toStream ++ verticesy.take(1))
+      if (usePoints)
+        vis.addPoints(pl, pointsx, pointsy)
+      else
+        vis.addLine(pl, pointsx, pointsy)
+    }
+    fig.refresh()
+  }
+}
+
+private class Visualizer(title: String) {
+  val fig = new Figure(title)
   fig.clear()
-  val pl = fig.subplot(0)
-  pl.xlabel = xlabel
-  pl.ylabel = ylabel
-  pl.title = title
+
+  def getPlot(i: Int) = fig.subplot(i+1, 1, i)
   
   // main plot functions
-  def plotData(xs: DenseVector[Double], ys: DenseVector[Double], name: String = ""): Visualizer = {
-    pl+=plot(xs, ys, name = name)
-    if(!name.isEmpty())
+  def addLine(pl: Plot, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
+    pl += plot(xs, ys, name = legend)
+    if (!legend.isEmpty())
       pl.legend = true
     fig.refresh()
-    this
-  }
-  
-  def plotPoints(xs: DenseVector[Double], ys: DenseVector[Double]): Visualizer = {
-    pl+=plot(xs, ys, '.',  "black")
-    fig.refresh()
-    this
-  }
-  
-  // other plot functions
-  def plotData(data: DenseMatrix[Double], names: Array[String]): Visualizer = {
-    val xs = linspace(0, data.cols, data.cols)
-    plotData(xs, data, names)
   }
 
-  def plotData(dataArray: Array[DenseMatrix[Double]], names: Array[Array[String]]): Visualizer = {
-    val rows = dataArray.map(_.rows).sum
-    val cols = dataArray(0).cols
-    val data = DenseMatrix.zeros[Double](rows, cols)
-    var currentRow = 0
-    for(k <- 0 to dataArray.length-1){
-      val dat = dataArray(k)
-      data(currentRow to currentRow+dat.rows-1, 0 to cols-1):=dataArray(k)
-      currentRow += dat.rows
-    }
-    
-    plotData(data, names.flatten)
-  }
-  
-  def plotData(xs: DenseVector[Double], data: DenseMatrix[Double], names: Array[String]): Visualizer = {
-    for(k <- 0 to data.rows-1){
-      plotData(xs, data.t(::, k), names(k))
-    }
-    this
-  }
-  
-  def plotFunctions(functions: Array[Double => Double], domain: (Double, Double), names: Array[String], nbPoints: Int = 100): Visualizer = {
-    val x = linspace(domain._1, domain._2, nbPoints)
-    for(k <- 0 to functions.size-1){
-      plotData(x, x.map(functions(k)), names(k))
-    }
-    this
-  }
-  
-  def plotStrategies(data: DenseMatrix[Double], continuous: Boolean = false): Visualizer = {
-    val support = data.rows
-    val vertices = DenseMatrix.zeros[Double](2, support)
-    for(k<- 0 to support-1){
-      val theta = k*2*math.Pi/support
-      vertices(0, k) = math.cos(theta)
-      vertices(1, k) = math.sin(theta)  
-    }
-    val verticesCycle = DenseMatrix.horzcat(vertices, vertices(0 to 1, 0 to 0))
-    val points = (vertices*data)
-    
-    plotData(verticesCycle.t(::,0), verticesCycle.t(::,1))
-    if(continuous)
-      plotData(points.t(::, 0), points.t(::, 1))
-    else
-      plotPoints(points.t(::, 0), points.t(::, 1))
-    
-    fig.refresh()
-    this
+  def addLine(pl: Plot, ys: Stream[Double], legend: String) {
+    val xs = Stream.range(0, ys.size).map(_.doubleValue)
+    addLine(pl, xs, ys, legend)
   }
 
+  def addPoints(pl: Plot, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
+    pl += plot(xs, ys, '.', "black")
+    if (!legend.isEmpty())
+      pl.legend = true
+    fig.refresh()
+  }
 }

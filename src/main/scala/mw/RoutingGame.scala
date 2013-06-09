@@ -2,24 +2,25 @@ package mw
 
 import breeze.linalg._
 import scala.collection.mutable.HashMap
+import scala.util.parsing.json._
 import util.Visualizer
 
-class Network(graph: DirectedGraph, val groupSourceSinks: Array[(Int, Int)]) {
+class Network(graph: DirectedGraph, val sourceSinkPairs: Array[(Int, Int)]) {
   val edges = graph.edges
   val nbNodes = graph.nodes.size
   val nbEdges = edges.size
-  val nbGroups = groupSourceSinks.size
-  val groupPaths: Array[Array[List[Int]]] =
-    groupSourceSinks.map(s => graph.findLooplessPaths(s._1, s._2).toArray.map(_.edges.map(_.id)))
+  val pathsArray: Array[Array[List[Int]]] =
+    sourceSinkPairs.map(s => graph.findLooplessPaths(s._1, s._2).toArray.map(_.edges.map(_.id)))
 
-  val edgePathInc = new Array[DenseMatrix[Double]](nbGroups)
-  for (k <- 0 to nbGroups - 1) {
-    val paths = groupPaths(k)
+  val edgePathIncidence = new Array[DenseMatrix[Double]](sourceSinkPairs.size)
+  
+  for (k <- sourceSinkPairs.indices) {
+    val paths = pathsArray(k)
     val nbPaths = paths.size
-    edgePathInc(k) = DenseMatrix.zeros[Double](nbEdges, nbPaths)
+    edgePathIncidence(k) = DenseMatrix.zeros[Double](nbEdges, nbPaths)
     for (i <- 0 to nbEdges - 1; j <- 0 to nbPaths - 1)
       if (paths(j).contains(i))
-        edgePathInc(k)(i, j) = 1
+        edgePathIncidence(k)(i, j) = 1
   }
 
   def edgeLatencies(edgeFlows: DenseVector[Double]): DenseVector[Double] = {
@@ -30,139 +31,130 @@ class Network(graph: DirectedGraph, val groupSourceSinks: Array[(Int, Int)]) {
   }
 
   def pathLatency(edgeLatencies: DenseVector[Double])(groupId: Int)(pathId: Int): Double = {
-    (edgePathInc(groupId).t * edgeLatencies).apply(pathId)
+    (edgePathIncidence(groupId).t * edgeLatencies).apply(pathId)
   }
 
   def computeEdgeFlows(pathFlows: Array[DenseVector[Double]]): DenseVector[Double] = {
     val edgeLatencies = DenseVector.zeros[Double](nbEdges)
-    for (k <- 0 to nbGroups - 1) {
-      edgeLatencies :+= edgePathInc(k) * pathFlows(k)
+    for (k <- sourceSinkPairs.indices) {
+      edgeLatencies :+= edgePathIncidence(k) * pathFlows(k)
     }
     edgeLatencies
   }
 
+  def toJSON() : String = {
+    def groupOf(id: Int): Int = { 
+      val list = for(
+          i <- sourceSinkPairs.indices; 
+          (source, sink) = sourceSinkPairs(i); 
+          if source == id || sink == id
+          ) yield i
+      list.headOption match {
+        case None => 0
+        case Some(group) => group + 1
+      }
+    }
+    
+    def JSONify(obj: Any): Any = obj match {
+      case map: Map[String, Any] => JSONObject(map.map(e => e._1->JSONify(e._2)))
+      case list: List[Any] => JSONArray(list.map(JSONify))
+      case _ => obj
+    }
+    
+    val jsonObject = JSONify(Map(
+      "nodes"->
+        (0 to nbNodes - 1).toList.map(id => Map(
+            "name" -> id, 
+            "group" -> groupOf(id))
+        ),
+      "links"->
+        (0 to nbEdges - 1).toList.map(edgeId => Map(
+            "source"->edges(edgeId).from.id,
+            "target"->edges(edgeId).to.id,
+            "value"->1)
+        )
+      ))
+      
+    jsonObject.toString
+  }
 }
+
+
+
+
 
 class RoutingGame(totalFlows: Array[Double], network: Network) extends Nature {
-  val nbEdges = network.nbEdges
-  val nbGroups = totalFlows.size
-  var pathFlows: Array[DenseVector[Double]] = new Array[DenseVector[Double]](nbGroups)
-  for (k <- 0 to nbGroups - 1) {
-    val nbPaths = network.groupPaths(k).size
-    pathFlows(k) = DenseVector.fill[Double](nbPaths) { totalFlows(k) / nbPaths }
-  }
-
-  var edgeFlows = DenseVector.zeros[Double](nbEdges)
-  var edgeLatencies = DenseVector.zeros[Double](nbEdges)
-
-  def getLatency(groupId: Int)(pathId: Int) = network.pathLatency(edgeLatencies)(groupId)(pathId)
-
-  def getLatencies(groupId: Int) = new DenseVector[Double]((0 to pathFlows(groupId).size - 1).map(getLatency(groupId)(_)).toArray)
-
-  def update(groupId: Int, strategy: DenseVector[Double]) = {
-    pathFlows(groupId) = strategy * totalFlows(groupId)
-    if (groupId == nbGroups - 1) {
-      edgeFlows = network.computeEdgeFlows(pathFlows)
-      edgeLatencies = network.edgeLatencies(edgeFlows)
-    }
-  }
-
-  def toJSON() : String = {
-    var content = new String()
-    content = "{ \"nodes\":[ \n"
-    for (id <- 0 to network.nbNodes - 1) {
-      var cat = 0
-      for (k <- 0 to nbGroups -1) {
-        cat = if ( (network.groupSourceSinks(k)._1 == id) || (network.groupSourceSinks(k)._2 == id) ) k+1 else cat
-      }
-      content += "{\"name\":"+ id +", \"group\":"+ cat +"},\n"
-    }
-    content = content.substring(0, content.length()-2) + "], \n \"links\":[ \n"
-    for (edgeId <- 0 to nbEdges - 1) {
-      content += "{\"source\":" + network.edges(edgeId).from.id + ", \"target\":" + network.edges(edgeId).to.id + ", \"value\":" + edgeLatencies(edgeId) + "},\n"
-    }
-    content = content.substring(0, content.length()-2) + "] }"
-    content
+  case class NetworkState(
+      pathFlows: Array[DenseVector[Double]], 
+      edgeFlows: DenseVector[Double],
+      edgeLatencies: DenseVector[Double])
+  
+  type State = NetworkState
+  
+  def initialState(strategies: Array[DenseVector[Double]]): State = {
+    update(null, strategies)
   }
   
+  def update(state: State, strategies: Array[DenseVector[Double]]): State = {
+    val pathFlows = for((strategy, totalFlow) <- strategies zip totalFlows) yield strategy*totalFlow
+    val edgeFlows = network.computeEdgeFlows(pathFlows)
+    val edgeLatencies = network.edgeLatencies(edgeFlows)
+    NetworkState(pathFlows, edgeFlows, edgeLatencies)
+  }
+  
+  def loss(state: State)(expert: Expert): Double = expert match {
+    case RoutingExpert(groupId, pathId) => getLatency(state)(groupId)(pathId)
+  }
+  
+  private def getLatency(state: State)(groupId: Int)(pathId: Int) = 
+    network.pathLatency(state.edgeLatencies)(groupId)(pathId)
 }
 
-class RoutingExpert(game: RoutingGame, val groupId: Int, val pathId: Int) extends Expert(game) {
-  def nextLoss(): Double = {
-    game.getLatency(groupId)(pathId)
-  }
-}
+
+
+
+case class RoutingExpert(groupId: Int, pathId: Int) extends Expert
+
 
 class RoutingGameSim(
   adj: Map[Int, List[(Int, Double => Double)]],
   sourceSinkPairs: Array[(Int, Int)],
-  totalFlows: Array[Double], 
+  totalFlows: Array[Double],
+  updateRule: UpdateRule,
   randomizedStart: Boolean) {
 
-  var singleStrategyPlot = false
   val graph = DirectedGraph.fromAdjacencyMap(adj)
   val network = new Network(graph, sourceSinkPairs)
-  val K = network.nbGroups
-  val eps: Array[Int => Double] = (0 to K-1).map(k=> (t:Int) => 10. / (10 + t)).toArray
+  // this default value will only be used for initialization. Van change it later
+  val defaultEpsilon = (t:Int) => 10. / (10 + t)
   
-  def launch(T: Int) {
-    val game = new RoutingGame(totalFlows, network)
-    val experts = new Array[List[RoutingExpert]](K)
-    for (k <- 0 to K - 1)
-      experts(k) = (0 to network.groupPaths(k).size - 1).map(new RoutingExpert(game, k, _)).toList
+  val game = new RoutingGame(totalFlows, network)
+  val algorithms = sourceSinkPairs.indices.toArray.map(groupId => {
+    val experts: Array[Expert] = 
+      for(pathId <- network.pathsArray(groupId).indices.toArray) 
+        yield RoutingExpert(groupId, pathId)
+    new MWAlgorithm(defaultEpsilon, experts, updateRule)
+  })
+  
+  def pathToString(edgeList: List[Int]): String = edgeList match {
+    case Nil => ""
+    case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
+    case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
+  }
+  val legend = network.pathsArray.map(paths => paths.map(pathToString))
+  
+  val coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
+  val strategies = coordinator.strategiesStream
+  val flows = coordinator.natureStateStream.map(_.pathFlows)
+  val latencies = coordinator.lossStream
+  val avgLatencies = coordinator.averageLossStream
 
-    val algs = new Array[MWAlgorithm[RoutingGame]](K)
-    for (k <- 0 to K - 1)
-      algs(k) = new MultilinearMWAlgorithm[RoutingGame](k, eps(k), experts(k), game, randomizedStart)
-
-      
-    def pathToString(edgeList: List[Int]): String = edgeList match {
-      case Nil => ""
-      case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
-      case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
-    }  
+  
+  def runFor(T: Int) {
+    System.out.println(network.toJSON())
     
-    // simulation
-    val xs = new Array[DenseMatrix[Double]](K)
-    val ls = new Array[DenseMatrix[Double]](K)
-    val avgLs = new Array[DenseMatrix[Double]](K)
-    val names = new Array[Array[String]](K)
-    for (k <- 0 to K - 1) {
-      val nbExperts = experts(k).length
-      xs(k) = DenseMatrix.zeros[Double](nbExperts, T)
-      ls(k) = DenseMatrix.zeros[Double](nbExperts, T)
-      avgLs(k) = DenseMatrix.zeros[Double](nbExperts, T)
-      names(k) = network.groupPaths(k).map(pathToString)
-    }
-
-    for (t <- 0 to T - 1) {
-      for (alg <- algs)
-        alg.next()
-      for (k <- 0 to K - 1) {
-        xs(k)(::, t) := game.pathFlows(k)
-        ls(k)(::, t) := game.getLatencies(k)
-        val alpha = t.doubleValue/(t+1)
-        avgLs(k)(::, t) := 
-          {if(t == 0)
-            ls(k)(::, t)
-          else
-            avgLs(k)(::, t-1)*alpha + ls(k)(::, t)*(1-alpha)
-          }
-      }
-    }
-    
-    System.out.println(game.toJSON())
-    new Visualizer("t", "mu(t)", "Flow").plotData(xs, names)
-    new Visualizer("t", "mu(t)", "Latency").plotData(ls, names)
-    new Visualizer("t", "mu(t)", "Average Latency").plotData(avgLs, names)
-    
-    if(singleStrategyPlot){
-      val strategyVis = new Visualizer("", "", "Strategies")
-      (0 to K-1).toList.foldLeft(strategyVis)((vis, k)=>vis.plotStrategies(xs(k)/totalFlows(k), true))
-    }else{
-      for (k <- 0 to K-1)
-        new Visualizer("", "", "Strategies").plotStrategies(xs(k)/totalFlows(k), true)
-    }
-      
+    Visualizer.plotLineGroups(flows.take(T), "t", "f(t)", "Path Flows", legend)
+    Visualizer.plotLineGroups(latencies.take(T), "t", "latency(t)", "Path Latencies", legend)
+    Visualizer.plotStrategies(strategies.take(T)) 
   }
 }
