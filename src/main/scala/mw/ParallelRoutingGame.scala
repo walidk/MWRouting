@@ -14,9 +14,8 @@ class ParallelRoutingSim(
     updateRule,
     randomizedStart) {
   override def runFor(T:  Int) {
-    import Visualizer._ // for implicit conversions
+    Visualizer.plotFunctions(latencyFunctions, (0, totalFlow), "f", "l(f)", "Latency functions", 300)
     super.runFor(T)
-    Visualizer.plotFunctions(latencyFunctions, (0, totalFlow), "f", "l(f)", "Latency functions", 100)
   }
 
 }

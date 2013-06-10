@@ -6,15 +6,16 @@ import util.Visualizer
 
 object main {
   def main(args: Array[String]): Unit = {
-//    Simulations.launchGraphTest()
-//    Simulations.launchParallelGraphTest()
-    Simulations.launchZeroSumGame()
+//    Simulations.launchDBLoadBalancing()
+    Simulations.launchRoutingGame()
+//    Simulations.launchParallelRoutingGame()
+//    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
   }
 }
 
 object Simulations {
-  def launchParallelGraphTest() {
+  def launchParallelRoutingGame() {
     val latencies: Array[Double => Double] = 
       Array(
           x => 3 * x, 
@@ -29,7 +30,7 @@ object Simulations {
     sim.runFor(100)
   }
 
-  def launchGraphTest() { 
+  def launchRoutingGame() { 
     val adj: Map[Int, List[(Int, Double => Double)]] = Map(
       0 -> List((1, x => x*x+2.5), (4, x => x / 2)),
       1 -> List(),
@@ -45,7 +46,10 @@ object Simulations {
     val sourceSinks = Array((0, 1), (2, 3), (7, 8))
     val totalFlows = Array(1., 1., 1.)
     val randomizedStart = true
-    val updateRule = ExponentialUpdate()
+    val updateRule = 
+//      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+      PolyUpdate(.5)
     val eps = (t:Int)=>
 //      .1
 //      .5
@@ -90,4 +94,32 @@ object Simulations {
     sim.algorithms(0).epsilon = eps
     sim.runFor(T)
   }
+  
+  def launchDBLoadBalancing() {
+    val T = 100
+    val latencies: Array[Double => Double] = 
+      Array(
+          x => 80+30*Math.exp(x*Math.abs(Math.sin(6.28*x/10))/300),
+          x => 60*Math.exp(x*Math.abs(Math.sin(6.28*x/10))/50))
+//          x => Math.exp(-x/1000),
+//          x => 1 - x/1000)
+//          x => 30*Math.exp(x/50),
+//          x => 60*Math.exp(x/150))
+//          x => 2 + 15 * Math.pow(1.28,x*3))
+    val totalFlow = 75
+    val randomizedStart = true
+    val eps: Int => Double = t=> .5 / (10 + t)
+    
+    val sim1 = new ParallelRoutingSim(latencies, totalFlow, ExponentialUpdate(), randomizedStart)
+    sim1.algorithms.foreach(_.epsilon = eps)
+    sim1.runFor(T)
+    
+    val sim2 = new ParallelRoutingSim(latencies, totalFlow, PolyUpdate(.5), randomizedStart)
+    sim2.runFor(T)
+    
+    val sim4 = new ParallelRoutingSim(latencies, totalFlow, FollowTheMeanUpdate(), randomizedStart)
+    sim4.algorithms.foreach(_.epsilon = eps)
+    sim4.runFor(T)
+  }
+  
 }
