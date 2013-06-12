@@ -9,6 +9,7 @@ object main {
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchRoutingGame()
     Simulations.launchStackelbergRouting()
+//    Simulations.launchStackelbergParallelRouting()
 //    Simulations.launchParallelRoutingGame()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
@@ -122,7 +123,9 @@ object Simulations {
     sim4.runFor(T)
   }
   
-  def launchStackelbergRouting() {
+  def launchStackelbergParallelRouting() {
+    // The map is of the form (nodeId -> List((neighborId1, lat1, dLat1), (neighborId2, lat2, dLat2), ...))
+    // lat1 is the latency function of the edge (nodeId, neighborId1), and dLat1 is its derivative  
     val adj: Map[Int, List[(Int, Double => Double, Double => Double)]] = 
       Map(0 -> List(
           (1, x=>3*x, x=>3),
@@ -136,15 +139,42 @@ object Simulations {
     val compliantFlows = Array(.5)
     val randomizedStart = true
     val updateRule = 
+//      ExponentialUpdate()
+      FollowTheMeanUpdate()
+    val eps = (t:Int)=>.01/(t+10)
+    
+    val sim = new StackelbergRoutingGameSim(adj, sourceSinks, nonCompliantFlows, compliantFlows, updateRule, randomizedStart)
+    sim.algorithms(1).epsilon = eps
+    sim.runFor(T)
+  }
+  
+  
+  def launchStackelbergRouting() {
+    val adj: Map[Int, List[(Int, Double=>Double, Double=>Double)]] = Map(
+      0 -> List((1, x=>x*x+2.5, x=>2*x), (4, x=>x/2, x=>.5)),
+      1 -> List(),
+      2 -> List((3, x=>x+1., x=>1.), (4, x=>.5, x=>0)),
+      3 -> List((8, x=>1, x=>0)),
+      4 -> List((5, x=>3*x*x, x=>6*x), (6, x=>x*x*x, x=>3*x*x)),
+      5 -> List((1, x=>x/3, x=>1./3), (3, x=>x/4, x=>1./4)), 
+      6 -> List((1, x=>x*x/2, x=>x), (3, x=>x, x=>1)),
+      7 -> List((2, x=>x*x/2, x=>x)),
+      8 -> List()
+      )
+    
+    val T = 100
+    val sourceSinks = Array((0, 1), (2, 3), (7, 8))
+    val nonCompliantFlows = Array(.8, .8, .8)
+    val compliantFlows = Array(.2, .2, .2)
+    val randomizedStart = true
+    val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-//      PolyUpdate(.5)
-    val eps = (t:Int)=>.1
+    val eps = (t:Int)=>.01/(t+10)
     
     val sim = new StackelbergRoutingGameSim(adj, sourceSinks, nonCompliantFlows, compliantFlows, updateRule, randomizedStart)
 //    sim.algorithms(1).epsilon = eps
     sim.runFor(T)
   }
-  
   
 }

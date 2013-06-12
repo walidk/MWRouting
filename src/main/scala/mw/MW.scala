@@ -174,7 +174,7 @@ class MWAlgorithm(
   
   val nextWeight = updateRule match {
     case ExponentialUpdate() => exponentialWeights _
-    case PolyUpdate(exponent: Double) => polynomialWeight (exponent) _
+    case PolyUpdate(exponent) => polynomialWeight (exponent) _
     case FollowTheMeanUpdate() => followTheMeanWeight _
   }
   
