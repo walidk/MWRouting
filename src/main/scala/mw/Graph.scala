@@ -33,12 +33,13 @@ class DirectedGraph {
     nodes += (node.id->node)
   }
   
-  def addEdge(from: Node, to: Node, latency: Double=>Double) {
+  def addEdge(from: Node, to: Node, latency: Double=>Double): Edge = {
     val edge = Edge(edgeId, from, to, latency)
     edges += edgeId->edge
     from.outEdges += (edgeId->edge)
     to.inEdges += (edgeId->edge)
     edgeId+=1
+    edge
   }
   
   override def toString(): String = {

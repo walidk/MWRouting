@@ -7,12 +7,14 @@ import util.Visualizer
 object main {
   def main(args: Array[String]): Unit = {
 //    Simulations.launchDBLoadBalancing()
-    Simulations.launchRoutingGame()
+//    Simulations.launchRoutingGame()
+    Simulations.launchStackelbergRouting()
 //    Simulations.launchParallelRoutingGame()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
   }
 }
+
 
 object Simulations {
   def launchParallelRoutingGame() {
@@ -25,11 +27,11 @@ object Simulations {
     val totalFlow = 2.
     val updateRule = ExponentialUpdate()
     val randomizedStart = true
-    // ===================
+    
     val sim = new ParallelRoutingSim(latencies, totalFlow, updateRule, randomizedStart)
     sim.runFor(100)
   }
-
+  
   def launchRoutingGame() { 
     val adj: Map[Int, List[(Int, Double => Double)]] = Map(
       0 -> List((1, x => x*x+2.5), (4, x => x / 2)),
@@ -42,6 +44,7 @@ object Simulations {
       7 -> List((2, x => x*x / 2)),
       8 -> List()
       )
+      
     val T = 100
     val sourceSinks = Array((0, 1), (2, 3), (7, 8))
     val totalFlows = Array(1., 1., 1.)
@@ -57,7 +60,6 @@ object Simulations {
       1./(10+t)
 //      1./math.sqrt(t)
     
-    // ===============
     
     val sim = new RoutingGameSim(adj, sourceSinks, totalFlows, updateRule, randomizedStart)
     sim.algorithms(0).epsilon = eps
@@ -75,7 +77,6 @@ object Simulations {
       .5
 //      1./(10+t)
     val randomizedStart = true
-    // ==============
     
     val sim = new ZeroSumGameSim(payoffMatrix, ExponentialUpdate(), randomizedStart)
     sim.algorithms(0).epsilon = eps
@@ -88,7 +89,6 @@ object Simulations {
     val randomizedStart = true
     val updateRule = ExponentialUpdate()
     val eps: Int=>Double = t =>1./(10+t)
-    // ===============
     
     val sim = new ZeroSumGameAdversarialSim(payoffMatrix, updateRule, randomizedStart)
     sim.algorithms(0).epsilon = eps
@@ -121,5 +121,30 @@ object Simulations {
     sim4.algorithms.foreach(_.epsilon = eps)
     sim4.runFor(T)
   }
+  
+  def launchStackelbergRouting() {
+    val adj: Map[Int, List[(Int, Double => Double, Double => Double)]] = 
+      Map(0 -> List(
+          (1, x=>3*x, x=>3),
+          (1, x=>x*x, x=>2*x),
+          (1, x=>2*(x+1)*(x+1), x=>4*(x+1))),
+          1 -> List())
+    
+    val T = 100
+    val sourceSinks = Array((0, 1))
+    val nonCompliantFlows = Array(1.5)
+    val compliantFlows = Array(.5)
+    val randomizedStart = true
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+//      PolyUpdate(.5)
+    val eps = (t:Int)=>.1
+    
+    val sim = new StackelbergRoutingGameSim(adj, sourceSinks, nonCompliantFlows, compliantFlows, updateRule, randomizedStart)
+//    sim.algorithms(1).epsilon = eps
+    sim.runFor(T)
+  }
+  
   
 }

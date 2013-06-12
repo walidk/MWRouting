@@ -23,23 +23,25 @@ class Network(graph: DirectedGraph, val sourceSinkPairs: Array[(Int, Int)]) {
         edgePathIncidence(k)(i, j) = 1
   }
 
-  def edgeLatencies(edgeFlows: DenseVector[Double]): DenseVector[Double] = {
+  protected def edgeFlowsFromPathFlows(pathFlows: Array[DenseVector[Double]]): DenseVector[Double] = {
+    val edgeLatencies = DenseVector.zeros[Double](nbEdges)
+    for (k <- sourceSinkPairs.indices) {
+      edgeLatencies :+= edgePathIncidence(k) * pathFlows(k)
+    }
+    edgeLatencies
+  }
+  
+  protected def edgeLatenciesFromEdgeFlows(edgeFlows: DenseVector[Double]): DenseVector[Double] = {
     val edgeLatencies = DenseVector.zeros[Double](nbEdges)
     for (edgeId <- 0 to nbEdges - 1)
       edgeLatencies(edgeId) = edges(edgeId).latency(edgeFlows(edgeId))
     edgeLatencies
   }
 
-  def pathLatency(edgeLatencies: DenseVector[Double])(groupId: Int)(pathId: Int): Double = {
-    (edgePathIncidence(groupId).t * edgeLatencies).apply(pathId)
-  }
-
-  def computeEdgeFlows(pathFlows: Array[DenseVector[Double]]): DenseVector[Double] = {
-    val edgeLatencies = DenseVector.zeros[Double](nbEdges)
-    for (k <- sourceSinkPairs.indices) {
-      edgeLatencies :+= edgePathIncidence(k) * pathFlows(k)
-    }
-    edgeLatencies
+  def pathLatenciesFromPathFlows(pathFlows: Array[DenseVector[Double]]): Array[DenseVector[Double]] = {
+    val edgeFlows = edgeFlowsFromPathFlows(pathFlows)
+    val edgeLatencies = edgeLatenciesFromEdgeFlows(edgeFlows)
+    pathFlows.indices.map(groupId => edgePathIncidence(groupId).t * edgeLatencies).toArray
   }
 
   def toJSON() : String = {
@@ -86,8 +88,7 @@ class Network(graph: DirectedGraph, val sourceSinkPairs: Array[(Int, Int)]) {
 class RoutingGame(totalFlows: Array[Double], network: Network) extends Nature {
   case class NetworkState(
       pathFlows: Array[DenseVector[Double]], 
-      edgeFlows: DenseVector[Double],
-      edgeLatencies: DenseVector[Double])
+      pathLatencies: Array[DenseVector[Double]])
   
   type State = NetworkState
   
@@ -97,17 +98,16 @@ class RoutingGame(totalFlows: Array[Double], network: Network) extends Nature {
   
   def update(state: State, strategies: Array[DenseVector[Double]]): State = {
     val pathFlows = for((strategy, totalFlow) <- strategies zip totalFlows) yield strategy*totalFlow
-    val edgeFlows = network.computeEdgeFlows(pathFlows)
-    val edgeLatencies = network.edgeLatencies(edgeFlows)
-    NetworkState(pathFlows, edgeFlows, edgeLatencies)
+    val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
+    NetworkState(pathFlows, pathLatencies)
   }
   
   def loss(state: State)(expert: Expert): Double = expert match {
     case RoutingExpert(groupId, pathId) => getLatency(state)(groupId)(pathId)
   }
   
-  private def getLatency(state: State)(groupId: Int)(pathId: Int) = 
-    network.pathLatency(state.edgeLatencies)(groupId)(pathId)
+  protected def getLatency(state: State)(groupId: Int)(pathId: Int) = 
+    state.pathLatencies(groupId)(pathId)
 }
 
 
