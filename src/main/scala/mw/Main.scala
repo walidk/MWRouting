@@ -30,7 +30,7 @@ object Simulations {
           (1, SLF(x => x * x)), 
           (1, SLF(x => 2 * (x + 1) * (x + 1) - 1))))
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
-    val totalFlow = 2.
+    val flowDemand = ConstantFlowDemand(2.).until(100).then(ConstantFlowDemand(3.))
     val updateRule = 
 //      ExponentialUpdate()
       FollowTheMeanUpdate()
@@ -40,7 +40,7 @@ object Simulations {
     val randomizedStart = true
     val T = 200
     
-    val commodity = Commodity(0, 1, ConstantFlowDemand(totalFlow), epsilon, updateRule, graph.findLooplessPathsAsEdgeId(0, 1))
+    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPathsAsEdgeId(0, 1))
     val sim = new ParallelRoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
   }
