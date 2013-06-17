@@ -3,12 +3,12 @@ package mw
 import breeze.linalg._
 import util.Visualizer
 
-class ZeroSumGame(PayoffMatrix: DenseMatrix[Double]) extends Nature {
-  case class GameState(
+class ZeroSumGame(PayoffMatrix: DenseMatrix[Double]) extends Game {
+  case class ZeroSumGameState(
       rowStrategy: DenseVector[Double], 
-      colStrategy: DenseVector[Double])
+      colStrategy: DenseVector[Double]) extends GameState
   
-  type State = GameState
+  type State = ZeroSumGameState
   
   val (nRows, nCols) = (PayoffMatrix.rows, PayoffMatrix.cols)
   
@@ -43,7 +43,7 @@ class ZeroSumGame(PayoffMatrix: DenseMatrix[Double]) extends Nature {
   }
   
   def update(state: State, strategies: Array[DenseVector[Double]]): State = {
-    GameState(strategies(0), strategies(1))
+    ZeroSumGameState(strategies(0), strategies(1))
   }
   
   def loss(state: State)(expert: Expert): Double = expert match {
@@ -65,17 +65,17 @@ case class ZeroSumGameColExpert(col: Int) extends Expert
 
 class ZeroSumGameSim(
     payoffMatrix: DenseMatrix[Double],
+    epsilon: LearningRate,
     updateRule: UpdateRule,
     randomizedStart: Boolean){
   
-  private val defaultEpsilon = (t:Int) => 10. / (10 + t)
   private val game = new ZeroSumGame(payoffMatrix)
   private val (nRows, nCols) = (game.nRows, game.nCols)
   private val rowExperts: Array[Expert] = (0 to nRows-1).map(ZeroSumGameRowExpert(_)).toArray
   private val colExperts: Array[Expert] = (0 to nCols-1).map(ZeroSumGameColExpert(_)).toArray
   val algorithms = new Array[MWAlgorithm](2) 
-  algorithms(0) = new MWAlgorithm(defaultEpsilon, rowExperts, updateRule)
-  algorithms(1) = new MWAlgorithm(defaultEpsilon, colExperts, updateRule)
+  algorithms(0) = new MWAlgorithm(epsilon, rowExperts, updateRule)
+  algorithms(1) = new MWAlgorithm(epsilon, colExperts, updateRule)
     
   val legend = 
     Array(
@@ -83,12 +83,12 @@ class ZeroSumGameSim(
       (0 to nCols-1).map("column " + _.toString).toArray
     )
 
-  val coordinator = new MWCoordinator(game, algorithms, randomizedStart)
+  val coordinator = new MWCoordinator[ZeroSumGame](game, algorithms, randomizedStart)
   val strategies = coordinator.strategiesStream
   val averageStrategies = coordinator.averageStrategiesStream
   val losses = coordinator.lossStream
   val averageLosses = coordinator.averageLossStream
-  val deltas = averageStrategies.map(s => coordinator.nature.getDelta(s(0), s(1)))
+  val deltas = averageStrategies.map(s => coordinator.game.getDelta(s(0), s(1)))
   
   def runFor(T: Int) {
     Visualizer.plotStrategies(strategies.take(T))
