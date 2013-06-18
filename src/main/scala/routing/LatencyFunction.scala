@@ -22,7 +22,7 @@ object TimeDependentLatencyFunction {
   def apply(latencyStream: Stream[Double=>Double]) = new TimeDependentLatencyFunction(latencyStream) 
 }
 
-class StaticLatencyFunction(latency: Double=>Double) extends TimeDependentLatencyFunction(Stream.continually(latency))
+class StaticLatencyFunction(val latency: Double=>Double) extends TimeDependentLatencyFunction(Stream.continually(latency))
 
 object StaticLatencyFunction {
   def apply(latency: Double=>Double) = new StaticLatencyFunction(latency) 

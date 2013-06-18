@@ -2,6 +2,7 @@ package util
 
 import breeze.plot._
 import breeze.linalg._
+import routing.LatencyFunction
 
 // Companion object
 object Visualizer {
@@ -52,6 +53,17 @@ object Visualizer {
       vis.addLine(pl, xs, xs map f)
   }
 
+  def plotLatencies(
+    latencyFunctions: Array[LatencyFunction],
+    domain: (Double, Double),
+    xLabel: String,
+    yLabel: String,
+    title: String,
+    nbPoints: Int = 100) {
+    val functions = latencyFunctions.map(lat => x=>lat(x))
+    plotFunctions(functions, domain, xLabel, yLabel, title, nbPoints)
+  }
+  
   def plotStrategies(
     strategies: Stream[Array[DenseVector[Double]]],
     usePoints: Boolean = false) {
