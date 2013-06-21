@@ -34,7 +34,7 @@ A talk that I gave on multiplictive weights algorithms and application to Routin
 
 -------------------------------------------------------------------------------
 ### Setup: running the code
-First, you should install the Scala Simple Build Tool, or `sbt`. If you are on Mac and have `brew`, you can simply `brew install sbt`. For other options see [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html]((http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)).
+First, you should install the Scala Simple Build Tool, or `sbt`. If you are on Mac and have `brew`, you can simply `brew install sbt`. For other options see [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html).
 
 You can then build `MWRouting` by running
 
@@ -48,7 +48,8 @@ Then you can either run the project from commandline
 ```
 sbt run
 ```
-or run it from your favorite IDE. For example to open in [Eclipse with the Scala plugin](http://scala-ide.org/download/sdk.html):
+or run it from your favorite IDE. For example to open in [Eclipse with the Scala plugin](http://scala-ide.org/download/sdk.html)
+
 1. `sbt eclipse` to generate the project files
 2. In Eclipse: file>import>general>existing projects and select the root directory where you cloned MWRouting.
 
@@ -98,14 +99,14 @@ To create an instance of the routing game, we first need to create
 - the corresponding latencies, stored in a `HashMap[Int, LatencyFunction]`
 this can be done using a helper function as follows:
 
-```
+```scala
 val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
 ```
 
 where `adj` is an adjacency map, that specifies, for each node, its neighboring nodes, and the latency on the edge connecting it to that neighbor. 
 The following example describes a parallel network:
 
-```
+```scala
 val adj: Map[Int, List[(Int, LatencyFunction)]] = 
   Map(1->Nil,
       0->List(
@@ -114,21 +115,26 @@ val adj: Map[Int, List[(Int, LatencyFunction)]] =
         (1, SLF(x => 2 * (x + 1) * (x + 1) - 1))
         ))
 ```
-here node `0` is connected to node `1` by multiple edges. The first edge has latency `SLF(x=>3*x).until(50).then(SLF(x=>3*x+4))`. Here `SLF` is an alias for `StaticLatencyFunction`, and as its name suggests, creates a latency function that is constant in time.
+here node `0` is connected to node `1` by multiple edges. The first edge has an affine latency function, `SLF(x=>2+2*x)`. Here `SLF` is an alias for `StaticLatencyFunction`, and as its name suggests, creates a latency function that is constant in time.
 
 A note on latency functions: an instance `lat` of `LatencyFunction` can be applied to a `Double`, so `lat(f)` will return the latency for a flow value `f`. Lateny functions can depend not only on flow, but also on time (see the class `TimeDependentLatencyFunction` for details)
 
-Once we have a `graph` and its `latencies`, we need to choose some additional parameters:
-- `val updateRule = ExponentialUpdate()` specified the update rule
-- `val learningRate = HarmonicLearningRate(1.)` specifies that we use a sequence of learning rates that decreases as 1/t
-- `val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))` describes the commodity. Here 
-  - the first two fields specify the source and the sink. 
-  - `flowDemand` is the flow that we need to send from the source to the sink (an instance of `FlowDemand`, which behaves essentially as a `Stream[Double]`). 
-  - `graph.findLooplessPaths(0, 1)` returns all the paths that connect the source to the sink. One could potentially restrict the set of paths that are offered to the players by manually giving a set of paths.
+Once we have a `graph` and its `latencies`, we need to desrcibe the commodity, i.e. the source-destination pair, how much flow is to be sent, and algorithm parameters:
+
+```scala
+val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+```
+
+Here
+- the first two fields specify the source and the sink. 
+- `updateRule = ExponentialUpdate()` specifies the update rule
+- `learningRate = HarmonicLearningRate(1.)` specifies that we use a sequence of learning rates that decreases as 1/t
+- `flowDemand = ConstantFlowDemand(2.)` is the flow that we need to send from the source to the sink (an instance of `FlowDemand`, which behaves essentially as a `Stream[Double]`). 
+- `graph.findLooplessPaths(0, 1)` returns all the paths that connect the source to the sink. One could potentially restrict the set of paths that are offered to the players by manually giving a set of paths.
 
 Finally, a helper class, `RoutingGameSim`, takes care of creating the game, an instance of MWAlgorithm and an instance of MWCoordinator
 
-```
+```scala
 val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
 ```
 
