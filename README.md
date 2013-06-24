@@ -26,14 +26,14 @@ On each day, the strategy of a player is an allocation of the unit flow over pos
 - with minimal information: they do not need to know the latency functions, only to observe the resulting path latency at the end of each day.
 
 More details on the topic will be posted here soon:
-[http://www.eecs.berkeley.edu/~walid/projects/mwrouting]()
+[http://www.eecs.berkeley.edu/~walid/projects.html](http://www.eecs.berkeley.edu/~walid/projects.html)
 
 A talk that I gave on multiplictive weights algorithms and application to Routing:
-[http://www.eecs.berkeley.edu/~walid/talks/experts-talk.pdf]()
+[http://www.eecs.berkeley.edu/~walid/talks/selfish-routing-and-experts.pdf](http://www.eecs.berkeley.edu/~walid/talks/selfish-routing-and-experts.pdf)
 
 
 -------------------------------------------------------------------------------
-### Setup: running the code
+### Setup
 First, you should install the Scala Simple Build Tool, or `sbt`. If you are on Mac and have `brew`, you can simply `brew install sbt`. For other options see [http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html).
 
 You can then build `MWRouting` by running
@@ -69,6 +69,7 @@ The main classes are:
   - update the game state using the previous strategies of the algorithms.
   - get the losses from the game given the current game state
   - update the strategies of each algorithm instance given the current losses
+
 Finally, `MWCoordinator` defines a number of streams that contain the sequence of strategies and game states. The most important ones are:
 - `strategiesStream`
 - `lossStream`
@@ -77,8 +78,7 @@ Finally, `MWCoordinator` defines a number of streams that contain the sequence o
 Note about the use of `Stream`s: defining the sequences of states as `Stream`s allows us to easily express each sequence as functional transformations of other sequences. This does not incur any significant increase in time complexity, since each Stream is immutable and is not recomputed. Also Stream's are evaluated lazily, so theses Streams are only evaluated when needed.
 
 
-------------------------------------------------------------------------------
-### Example: RoutingGame
+#### Example: RoutingGame
 To implement a routing game, we create a class `RoutingGame` that `extends Game`. The description of the game is contained in `network`, an instance of `LatencyNetowrk`, which contains in particular
 - the topology of the graph
 - the edge latency functions
@@ -90,8 +90,7 @@ The RoutingGame class then specifies
 - the `update` method. This calls the appropriate methods in `network`
 
 
-------------------------------------------------------------------------------
-### Creating and running an instance of the RoutingGame
+#### Creating and running an instance of the RoutingGame
 Here we walk through an example, given in `Main.scala`.
 
 To create an instance of the routing game, we first need to create
@@ -122,7 +121,7 @@ A note on latency functions: an instance `lat` of `LatencyFunction` can be appli
 Once we have a `graph` and its `latencies`, we need to desrcibe the commodity, i.e. the source-destination pair, how much flow is to be sent, and algorithm parameters:
 
 ```scala
-val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, paths)
 ```
 
 Here
@@ -130,7 +129,7 @@ Here
 - `updateRule = ExponentialUpdate()` specifies the update rule
 - `learningRate = HarmonicLearningRate(1.)` specifies that we use a sequence of learning rates that decreases as 1/t
 - `flowDemand = ConstantFlowDemand(2.)` is the flow that we need to send from the source to the sink (an instance of `FlowDemand`, which behaves essentially as a `Stream[Double]`). 
-- `graph.findLooplessPaths(0, 1)` returns all the paths that connect the source to the sink. One could potentially restrict the set of paths that are offered to the players by manually giving a set of paths.
+- `paths = graph.findLooplessPaths(0, 1)` returns all the paths that connect the source to the sink. One could potentially restrict the set of paths that are offered to the players by manually giving a set of paths.
 
 Finally, a helper class, `RoutingGameSim`, takes care of creating the game, an instance of MWAlgorithm and an instance of MWCoordinator
 
@@ -143,10 +142,22 @@ then `sim.runFor(T)` will run the game for `T` iterations, and generate a number
 - path latencies
 - path flows
 
-running the simulation with different learning rate sequences and update rules shows the impact on convergence.
+running the simulation with different learning rate sequences and update rules shows the impact on convergence. Running the above example will generate the following plots:
 
+##### Path flows
+![Path flows](http://www.eecs.berkeley.edu/~walid/projects/mwrouting/path-flows.png "Path Flows")
 
+##### Path latencies
+![Path latencies](http://www.eecs.berkeley.edu/~walid/projects/mwrouting/path-latencies.png "Path Latencies")
 
+##### Average latencies
+![Average latencies](http://www.eecs.berkeley.edu/~walid/projects/mwrouting/average-latencies.png "Average Latenecies")
+
+##### Trajectory of strategies
+![Strategies](http://www.eecs.berkeley.edu/~walid/projects/mwrouting/strategies.png "Strategies")
+
+##### Latency functions
+![Latency functions](http://www.eecs.berkeley.edu/~walid/projects/mwrouting/latency-functions.png "Latency Functions")
 
 
 -------------------------------------------------------------------------------
