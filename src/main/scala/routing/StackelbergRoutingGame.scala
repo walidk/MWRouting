@@ -5,7 +5,7 @@ import scala.collection.mutable.HashMap
 import mw._
 
 
-class StackelbergRoutingGame(network: LatencyNetwork, derivativeNetwork: LatencyNetwork) extends Game {
+class StackelbergRoutingGame(network: LatencyNetwork, stackelbergNetwork: LatencyNetwork) extends Game {
   case class NetworkState(
       pathNCFlows: Array[DenseVector[Double]],
       pathCFlows: Array[DenseVector[Double]],
@@ -26,7 +26,7 @@ class StackelbergRoutingGame(network: LatencyNetwork, derivativeNetwork: Latency
     val pathCFlows = network.pathFlowsFromStrategies(strategies.takeRight(nbPaths))
     val pathFlows = (pathNCFlows zip pathCFlows) map ({case(x, y) => x+y})
     val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
-    val pathDLatencies = derivativeNetwork.pathLatenciesFromPathFlows(pathFlows)
+    val pathDLatencies = stackelbergNetwork.pathLatenciesFromPathFlows(pathFlows)
     NetworkState(pathNCFlows, pathCFlows, pathFlows, pathLatencies, pathDLatencies)
   }
   
@@ -38,9 +38,7 @@ class StackelbergRoutingGame(network: LatencyNetwork, derivativeNetwork: Latency
   
   def loss(state: State)(expert: Expert): Double = expert match {
     case RoutingExpert(groupId, pathId) => getLatency(state)(groupId)(pathId)
-    case StackelbergRoutingExpert(groupId, pathId) => 
-      getLatency(state)(groupId)(pathId) +
-      getDLatency(state)(groupId)(pathId)*state.pathFlows(groupId)(pathId)
+    case StackelbergRoutingExpert(groupId, pathId) => getDLatency(state)(groupId)(pathId)
   }
 }
 
@@ -54,10 +52,14 @@ class StackelbergRoutingGameSim(
   cCommodities: Array[Commodity],
   randomizedStart: Boolean) {
 
+  private val identity = StaticLatencyFunction(x => x)
+  private val stackelbergLatencies = 
+    for((key, dlat) <- latencyDerivatives; lat = latencyFunctions(key))
+      yield key->(lat*identity+dlat)
   private val network = new LatencyNetwork(graph, latencyFunctions, cCommodities)
-  private val dNetwork = new LatencyNetwork(graph, latencyDerivatives, ncCommodities)
+  private val sNetwork = new LatencyNetwork(graph, stackelbergLatencies, ncCommodities)
   
-  private val game = new StackelbergRoutingGame(network, dNetwork)
+  private val game = new StackelbergRoutingGame(network, sNetwork)
   
   val cAlgorithms = new Array[MWAlgorithm](cCommodities.length)
   val ncAlgorithms = new Array[MWAlgorithm](ncCommodities.length)

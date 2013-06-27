@@ -3,13 +3,17 @@ package routing
 abstract class LatencyFunction { 
   def apply(x: Double): Double
   
-  def +(thatLatency: LatencyFunction) = { 
+  def +(thatLatency: LatencyFunction): LatencyFunction = { 
     val thisLatency = this
     new LatencyFunction(){def apply(x: Double) = thisLatency.apply(x)+thatLatency.apply(x)}
   }
   
-  def *(a: Double) = 
-    new LatencyFunction(){def apply(x: Double) = a*this.apply(x)}
+  def *(a: Double): LatencyFunction = this * StaticLatencyFunction(x=>a)
+  
+  def *(thatLatency: LatencyFunction): LatencyFunction = {
+    val thisLatency = this
+    new LatencyFunction(){def apply(x: Double) = thisLatency(x)*thatLatency(x)}
+  }
 }
 
 class GaussianNoise(sigmas: Stream[Double]) extends LatencyFunction {

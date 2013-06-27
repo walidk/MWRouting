@@ -7,13 +7,15 @@ import routing._
 
 object main {
   def main(args: Array[String]): Unit = {
-    Simulations.launchParallelRoutingGame()
+//    Simulations.launchParallelRoutingGame()
 //    Simulations.launchNoisyParallelRoutingGame()
 //    Simulations.launchTimeVaryingParallelRoutingGame()
 //    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchStackelbergRouting()
 //    Simulations.launchStackelbergParallelRouting()
+//    Simulations.launchTollRouting()
+    Simulations.launchTollParallelRouting()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
   }
@@ -25,7 +27,8 @@ object Simulations {
   def launchParallelRoutingGame() {
     val adj: Map[Int, List[(Int, LatencyFunction)]] = 
       Map(1->Nil,
-          0->List( 
+          0->List(
+          (1, SLF(x=>3*x)),
           (1, SLF(x => 2 + 2 * x)), 
           (1, SLF(x => x * x)), 
           (1, SLF(x => 2 * (x + 1) * (x + 1) - 1))
@@ -36,10 +39,10 @@ object Simulations {
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
     val epsilon = 
-//      HarmonicLearningRate(1.)
-      ConstantLearningRate(.1)
+      HarmonicLearningRate(2.)
+//      ConstantLearningRate(.1)
     val randomizedStart = true
-    val T = 200
+    val T = 100
     
     val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
@@ -237,7 +240,70 @@ object Simulations {
   }
   
   
-    // Zero Sum Games
+  def launchTollRouting() {
+    val adj: Map[Int, List[(Int, LatencyFunction, LatencyFunction)]] = Map(
+      0 -> List((1, SLF(x=>x*x+2.5), SLF(x=>2*x)), (4, SLF(x=>x/2), SLF(x=>.5))),
+      1 -> List(),
+      2 -> List((3, SLF(x=>x+1.), SLF(x=>1.)), (4, SLF(x=>.5), SLF(x=>0.))),
+      3 -> List((8, SLF(x=>1.), SLF(x=>0.))),
+      4 -> List((5, SLF(x=>3*x*x), SLF(x=>6*x)), (6, SLF(x=>x*x*x), SLF(x=>3*x*x))),
+      5 -> List((1, SLF(x=>x/3), SLF(x=>1./3)), (3, SLF(x=>x/4), SLF(x=>1./4))), 
+      6 -> List((1, SLF(x=>x*x/2), SLF(x=>x)), (3, SLF(x=>x), SLF(x=>1.))),
+      7 -> List((2, SLF(x=>x*x/2), SLF(x=>x))),
+      8 -> List()
+      )
+    
+    val (graph, latencyFunctions, latencyDerivatives) = DirectedGraph.graphAndLatenciesAndDerivativesFromAdjMap(adj)
+    val T = 300
+    val tollDelay = 10
+    val tollInterval = 1
+    val randomizedStart = true
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = 
+//      ConstantLearningRate(.1)
+      HarmonicLearningRate(1.)
+    
+    val commodities = Array(
+        Commodity(0, 1, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+    
+    val sim = new TollRoutingGameSim(graph, latencyFunctions, latencyDerivatives, commodities, tollDelay, tollInterval, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  def launchTollParallelRouting() {
+    val adj = 
+      Map(1 -> Nil, 
+          0 -> List(
+            (1, SLF(x=>3*x), SLF(x=>3.)),
+            (1, SLF(x=>x*x), SLF(x=>2*x)),
+            (1, SLF(x=>2*(x+1)*(x+1)), SLF(x=>4*(x+1)))
+          ))
+    
+    val (graph, latencyFunctions, latencyDerivatives) = DirectedGraph.graphAndLatenciesAndDerivativesFromAdjMap(adj)
+    val T = 100
+    val tollInterval = 5 // the tolls need to remain constant for a few days at a time
+    val tollDelay = 2 // the tolls are announced a few intervals in advance
+    val randomizedStart = true
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = 
+//      ConstantLearningRate(.1)
+      HarmonicLearningRate(10.)
+    
+    val commodities = Array(
+        Commodity(0, 1, ConstantFlowDemand(2.), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    
+    Visualizer.plotLatencies(latencyFunctions.values.toArray, (0, 2.), "f", "l(f)", "Latency Functions", 300)
+    val sim = new TollRoutingGameSim(graph, latencyFunctions, latencyDerivatives, commodities, tollDelay, tollInterval, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  // Zero Sum Games
   val payoffMatrix = DenseMatrix((.5, 1., 0.), (0., .5, 1.), (1., 0., .5), (.5, 0., 0.))
   def launchZeroSumGame() {
     val T = 400
@@ -249,7 +315,7 @@ object Simulations {
     val sim = new ZeroSumGameSim(payoffMatrix, eps, ExponentialUpdate(), randomizedStart)
     sim.runFor(T)
   }
-
+ 
   def launchZeroSumGameAdversarial() {
     val T = 200
     val randomizedStart = true
