@@ -98,16 +98,25 @@ class StackelbergRoutingGameSim(
   val strategies = coordinator.strategiesStream
 //  val flows = coordinator.natureStateStream.map(_.pathFlows)
   val flows = coordinator.gameStateStream.map(state => state.pathNCFlows++state.pathCFlows)
-  
   val latencies = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-
+  
+  private def socialCostOfState(state: coordinator.GameState): Double = {
+    val flows = state.pathFlows
+    val latencies = state.pathLatencies
+    var cost = 0.
+    for((flow, latency) <- flows.zip(latencies))
+      cost+=(flow:*latency).sum
+    cost
+  }
+  val socialCosts = coordinator.gameStateStream.map(socialCostOfState)
   
   def runFor(T: Int) {
     System.out.println(network.toJSON())
     Visualizer.plotLineGroups(flows.take(T), "t", "f(t)", "Path Flows", legend)
     Visualizer.plotLineGroups(latencies.take(T), "t", "l(t)", "Path Losses", legend)
-    Visualizer.plotLineGroups(avgLatencies.take(T), "t", "\\sum_{i = 1}^t l(i)", "Average Latencies", legend)
+    Visualizer.plotLine(socialCosts.take(T), "t", "social cost", "Social Costs")
+//    Visualizer.plotLineGroups(avgLatencies.take(T), "t", "\\sum_{i = 1}^t l(i)", "Average Latencies", legend)
     Visualizer.plotStrategies(strategies.take(T))
   }
 }
