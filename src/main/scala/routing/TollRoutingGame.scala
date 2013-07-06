@@ -93,29 +93,23 @@ class TollRoutingGameSim(
 //  val flows = coordinator.natureStateStream.map(_.pathFlows)
   val flows = coordinator.gameStateStream.map(state => state.pathFlows)
   val tolls = coordinator.gameStateStream.map(state => state.pathTolls)
-  
-  private def socialCostOfState(state: coordinator.GameState): Double = {
-    val flows = state.pathFlows
-    val latencies = state.pathLatencies
-    var cost = 0.
-    for((flow, latency) <- flows.zip(latencies))
-      cost+=(flow:*latency).sum
-    cost
-  }
-  
-  val socialCosts = coordinator.gameStateStream.map(socialCostOfState)
+  val socialCosts = flows.map(network.socialCostFromPathFlows(_))
   val latencies = coordinator.gameStateStream.map(_.pathLatencies)
   val losses = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-
+  val initialStrategy = strategies(0)
+  val solver = new SocialOptimizer(network)
+  val optStrategy = solver.optimalStrategy
+  val optCost = solver.optimalCost
   
   def runFor(T: Int) {
     System.out.println(network.toJSON())
-    Visualizer.plotLineGroups(flows.take(T), "t", "f(t)", "Path Flows", legend)
-//    Visualizer.plotLineGroups(latencies.take(T), "t", "lat(t)", "Path Latencies)", legend)
-    Visualizer.plotLineGroups(tolls.take(T), "t", "toll(t)", "Path Tolls", legend)
-    Visualizer.plotLineGroups(losses.take(T), "t", "loss(t)", "Path Losses (latency + toll)", legend)
-    Visualizer.plotLine(socialCosts.take(T), "t", "social cost", "Social Costs")
-    Visualizer.plotStrategies(strategies.take(T))
+    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
+//    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "lat(t)", legend)
+    Visualizer("Path tolls").plotLineGroups(tolls.take(T), "t", "toll(t)", legend)
+    Visualizer("Path Losses (latency + toll)").plotLineGroups(losses.take(T), "t", "loss(t)", legend)
+    Visualizer("Social cost").plotLine(socialCosts.take(T), "t", "social cost")
+      .plotLine(Stream.continually(optCost).take(T), "t", "social cost")
+    Visualizer("Strategies").plotStrategies(strategies.take(T))
   }
 }

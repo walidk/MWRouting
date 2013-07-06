@@ -6,93 +6,10 @@ import routing.LatencyFunction
 
 // Companion object
 object Visualizer {
-  def plotLine(
-    line: Stream[Double],
-    xLabel: String,
-    yLabel: String,
-    figTitle: String) {
-    val vis = new Visualizer(figTitle)
-    val pl = vis.fig.subplot(1, 1, 0);
-    pl.xlabel = xLabel
-    pl.ylabel = yLabel
-    vis.addLine(pl, line, "")
-  }
-
-  def plotLineGroups(
-    linesStream: Stream[Array[DenseVector[Double]]],
-    xLabel: String,
-    yLabel: String,
-    figTitle: String,
-    legend: Array[Array[String]]) {
-    val vis = new Visualizer(figTitle)
-    val lineGroups = linesStream.map(_.map(_.toArray))
-    for (
-      (lineGroup, i) <- lineGroups.transpose zipWithIndex;
-      pl = vis.fig.subplot(i + 1, 1, i);
-      (line, leg) <- lineGroup.transpose zip legend(i)
-    ) {
-      pl.xlabel = xLabel
-      pl.ylabel = yLabel
-      vis.addLine(pl, line, leg)
-    }
-  }
-
-  def plotFunctions(
-    functions: Array[Double => Double],
-    domain: (Double, Double),
-    xLabel: String,
-    yLabel: String,
-    title: String,
-    nbPoints: Int = 100) {
-    val vis = new Visualizer(title)
-    val pl = vis.fig.subplot(0)
-    pl.xlabel = xLabel
-    pl.ylabel = yLabel
-    val xs = linspace(domain._1, domain._2, nbPoints).toArray.toStream
-    for (f <- functions)
-      vis.addLine(pl, xs, xs map f)
-  }
-
-  def plotLatencies(
-    latencyFunctions: Array[LatencyFunction],
-    domain: (Double, Double),
-    xLabel: String,
-    yLabel: String,
-    title: String,
-    nbPoints: Int = 100) {
-    val functions = latencyFunctions.map(lat => x=>lat(x))
-    plotFunctions(functions, domain, xLabel, yLabel, title, nbPoints)
-  }
-  
-  def plotStrategies(
-    strategies: Stream[Array[DenseVector[Double]]],
-    usePoints: Boolean = false) {
-    val vis = new Visualizer("Strategies")
-    val fig = vis.fig
-
-    for ((st, i) <- strategies.transpose zipWithIndex) {
-      val support = st.head.length
-      val verticesx = new Array[Double](support)
-      val verticesy = new Array[Double](support)
-      for (k <- 0 to support - 1) {
-        val theta = k * 2 * math.Pi / support
-        verticesx(k) = math.cos(theta)
-        verticesy(k) = math.sin(theta)
-      }
-      val pl = fig.subplot(1, i + 1, i)
-      val pointsx = st.map(_ dot DenseVector(verticesx))
-      val pointsy = st.map(_ dot DenseVector(verticesy))
-      vis.addLine(pl, verticesx.toStream ++ verticesx.take(1), verticesy.toStream ++ verticesy.take(1))
-      if (usePoints)
-        vis.addPoints(pl, pointsx, pointsy)
-      else
-        vis.addLine(pl, pointsx, pointsy)
-    }
-    fig.refresh()
-  }
+  def apply(title: String) = new Visualizer(title)  
 }
 
-private class Visualizer(title: String) {
+class Visualizer(title: String) {
   val fig = new Figure(title)
   fig.clear()
 
@@ -117,4 +34,86 @@ private class Visualizer(title: String) {
       pl.legend = true
     fig.refresh()
   }
+  
+  // other plot function
+  def plotLine(
+    line: Stream[Double],
+    xLabel: String,
+    yLabel: String) = {
+    val pl = getPlot(0);
+    pl.xlabel = xLabel
+    pl.ylabel = yLabel
+    addLine(pl, line, "")
+    this
+  }
+  
+  def plotLineGroups(
+    linesStream: Stream[Array[DenseVector[Double]]],
+    xLabel: String,
+    yLabel: String,
+    legend: Array[Array[String]]) = {
+    val lineGroups = linesStream.map(_.map(_.toArray))
+    for (
+      (lineGroup, i) <- lineGroups.transpose zipWithIndex;
+      pl = getPlot(i);
+      (line, leg) <- lineGroup.transpose zip legend(i)
+    ) {
+      pl.xlabel = xLabel
+      pl.ylabel = yLabel
+      addLine(pl, line, leg)
+    }
+    this
+  }
+
+  def plotFunctions(
+    functions: Array[Double => Double],
+    domain: (Double, Double),
+    xLabel: String,
+    yLabel: String,
+    nbPoints: Int = 100) = {
+    val pl = getPlot(0)
+    pl.xlabel = xLabel
+    pl.ylabel = yLabel
+    val xs = linspace(domain._1, domain._2, nbPoints).toArray.toStream
+    for (f <- functions)
+      addLine(pl, xs, xs map f)
+    this
+  }
+
+  def plotLatencies(
+    latencyFunctions: Array[LatencyFunction],
+    domain: (Double, Double),
+    xLabel: String,
+    yLabel: String,
+    nbPoints: Int = 100) = {
+    val functions = latencyFunctions.map(lat => x=>lat(x))
+    plotFunctions(functions, domain, xLabel, yLabel, nbPoints)
+    this
+  }
+  
+  def plotStrategies(
+    strategies: Stream[Array[DenseVector[Double]]],
+    usePoints: Boolean = false) = {
+    for ((st, i) <- strategies.transpose zipWithIndex) {
+      val support = st.head.length
+      val verticesx = new Array[Double](support)
+      val verticesy = new Array[Double](support)
+      for (k <- 0 to support - 1) {
+        val theta = k * 2 * math.Pi / support
+        verticesx(k) = math.cos(theta)
+        verticesy(k) = math.sin(theta)
+      }
+      val pl = fig.subplot(1, i + 1, i)
+      val pointsx = st.map(_ dot DenseVector(verticesx))
+      val pointsy = st.map(_ dot DenseVector(verticesy))
+      addLine(pl, verticesx.toStream ++ verticesx.take(1), verticesy.toStream ++ verticesy.take(1))
+      if (usePoints)
+        addPoints(pl, pointsx, pointsy)
+      else
+        addLine(pl, pointsx, pointsy)
+    }
+    this
+  }
+  
+  
 }

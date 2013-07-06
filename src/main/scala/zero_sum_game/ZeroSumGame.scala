@@ -91,11 +91,11 @@ class ZeroSumGameSim(
   val deltas = averageStrategies.map(s => coordinator.game.getDelta(s(0), s(1)))
   
   def runFor(T: Int) {
-    Visualizer.plotStrategies(strategies.take(T))
-    Visualizer.plotLineGroups(strategies.take(T), "t", "mu(t)", "Strategies", legend)
-    Visualizer.plotLineGroups(averageStrategies.take(T), "t", "mu(t)", "Average strategies", legend)
-    Visualizer.plotLineGroups(averageLosses.take(T), "t", "mu(t)", "Average strategy losses", legend)
-    Visualizer.plotLine(deltas.take(T), "t", "mu(t)", "Deltas of average strategies")
+    Visualizer("Strategies").plotStrategies(strategies.take(T))
+    Visualizer("Strategies").plotLineGroups(strategies.take(T), "t", "mu(t)", legend)
+    Visualizer("Average strategies").plotLineGroups(averageStrategies.take(T), "t", "mu(t)", legend)
+    Visualizer("Average strategy losses").plotLineGroups(averageLosses.take(T), "t", "mu(t)", legend)
+    Visualizer("Deltas of average strategies").plotLine(deltas.take(T), "t", "mu(t)")
   }
 }
 

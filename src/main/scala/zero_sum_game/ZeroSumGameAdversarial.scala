@@ -33,8 +33,8 @@ class ZeroSumGameAdversarialSim(
   val averageLosses = coordinator.averageLossStream
 
   def runFor(T: Int) {
-    Visualizer.plotStrategies(strategies.take(T))
-    Visualizer.plotLineGroups(averageLosses.take(T), "t", "avg loss(t)", "Average Losses", legend)
-    Visualizer.plotLineGroups(strategies.take(T), "t", "mu(t)", "Strategies", legend)
+    Visualizer("Strategies").plotStrategies(strategies.take(T))
+    Visualizer("Average Losses").plotLineGroups(averageLosses.take(T), "t", "avg loss(t)", legend)
+    Visualizer("Strategies").plotLineGroups(strategies.take(T), "t", "mu(t)", legend)
   }
 }

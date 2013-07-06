@@ -7,9 +7,9 @@ import scala.util.parsing.json._
 
 
 class LatencyNetwork(
-    graph: DirectedGraph, 
-    latencies: HashMap[Int, LatencyFunction],
-    commodities: Array[Commodity]) {
+    val graph: DirectedGraph, 
+    val latencies: HashMap[Int, LatencyFunction],
+    val commodities: Array[Commodity]) {
   
   val edges = graph.edges
   val nbNodes = graph.nodes.size
@@ -41,6 +41,14 @@ class LatencyNetwork(
     edgeLatencies
   }
 
+  def socialCostFromPathFlows(pathFlows: Array[DenseVector[Double]]): Double = {
+    val pathLatencies = pathLatenciesFromPathFlows(pathFlows)
+    var cost = 0.
+    for((flow, latency) <- pathFlows.zip(pathLatencies))
+      cost+=(flow:*latency).sum
+    cost
+  }
+  
   def pathLatenciesFromPathFlows(pathFlows: Array[DenseVector[Double]]): Array[DenseVector[Double]] = {
     val edgeFlows = edgeFlowsFromPathFlows(pathFlows)
     val edgeLatencies = edgeLatenciesFromEdgeFlows(edgeFlows)
