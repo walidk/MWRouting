@@ -2,6 +2,16 @@ package routing
 
 abstract class FlowDemand {
   def apply(): Double
+  
+  def +(thatDemand: FlowDemand): FlowDemand = { 
+    val thisDemand = this
+    new FlowDemand(){def apply() = thisDemand.apply()+thatDemand.apply()}
+  }
+  
+  def *(a: Double): FlowDemand = {
+    val thisDemand = this
+    new FlowDemand(){def apply() = a*thisDemand.apply()}
+  }
 }
 
 class TimeVaryingFlowDemand(val flowStream: Stream[Double]) extends FlowDemand {

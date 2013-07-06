@@ -2,6 +2,26 @@ package routing
 
 import breeze.linalg.DenseVector
 import breeze.optimize._
+import scala.collection.mutable.HashMap
+
+
+object SocialOptimizer{
+  def apply(network: LatencyNetwork) = new SocialOptimizer(network)
+  def apply(
+      graph: DirectedGraph, 
+      latencyFunctions: HashMap[Int, LatencyFunction],
+      ncCommodities: Array[Commodity], 
+      cCommodities: Array[Commodity]) = {
+    val commodities = for(
+        Commodity(source, sink, demand, epsilon, updateRule, paths) <- ncCommodities;
+        Commodity(cSource, cSink, cDemand, _, _, _) <- cCommodities;
+        if cSource == source && cSink == sink)
+      yield Commodity(source, sink, demand+cDemand, epsilon, updateRule, paths)
+    println(commodities(0).demand())
+    val network = new LatencyNetwork(graph, latencyFunctions, commodities)
+    new SocialOptimizer(network)
+  } 
+}
 
 class SocialOptimizer(network: LatencyNetwork) {
   private lazy val solution = solve()

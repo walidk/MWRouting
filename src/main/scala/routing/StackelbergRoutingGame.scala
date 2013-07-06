@@ -98,16 +98,21 @@ class StackelbergRoutingGameSim(
   val strategies = coordinator.strategiesStream
 //  val flows = coordinator.natureStateStream.map(_.pathFlows)
   val flows = coordinator.gameStateStream.map(state => state.pathNCFlows++state.pathCFlows)
+  val totalFlows = coordinator.gameStateStream.map(state => state.pathFlows)
   val latencies = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-  val socialCosts = flows.map(network.socialCostFromPathFlows(_))
+  val socialCosts = totalFlows.map(network.socialCostFromPathFlows(_))
+  val solver = SocialOptimizer(graph, latencyFunctions, ncCommodities, cCommodities)
+  val optStrategy = solver.optimalStrategy
+  val optCost = solver.optimalCost
   
   def runFor(T: Int) {
     System.out.println(network.toJSON())
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
     Visualizer("Path Losses").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
-    Visualizer( "Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
+    Visualizer("Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
     Visualizer("Social Costs").plotLine(socialCosts.take(T), "t", "social cost")
+      .plotLine(Stream.continually(optCost).take(T), "t", "social cost")
     Visualizer("Strategies").plotStrategies(strategies.take(T))
   }
 }
