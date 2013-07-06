@@ -23,7 +23,7 @@ class StackelbergRoutingGame(network: LatencyNetwork, stackelbergNetwork: Latenc
   override def update(state: State, strategies: Array[DenseVector[Double]]): State = {
     val nbPaths = strategies.length/2
     val pathNCFlows = network.pathFlowsFromStrategies(strategies.take(nbPaths))
-    val pathCFlows = network.pathFlowsFromStrategies(strategies.takeRight(nbPaths))
+    val pathCFlows = stackelbergNetwork.pathFlowsFromStrategies(strategies.takeRight(nbPaths))
     val pathFlows = (pathNCFlows zip pathCFlows) map ({case(x, y) => x+y})
     val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
     val pathDLatencies = stackelbergNetwork.pathLatenciesFromPathFlows(pathFlows)
