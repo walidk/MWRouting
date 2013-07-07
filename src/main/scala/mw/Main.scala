@@ -14,6 +14,7 @@ object main {
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchStackelbergRouting()
     Simulations.launchStackelbergParallelRouting()
+    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
 //    Simulations.launchTollParallelRouting()
 //    Simulations.launchZeroSumGame()
@@ -187,7 +188,7 @@ object Simulations {
           )
     
     val (graph, latencyFunctions, latencyDerivatives) = DirectedGraph.graphAndLatenciesAndDerivativesFromAdjMap(adj)
-    val T = 100
+    val T = 200
     val nonCompliantDemand = ConstantFlowDemand(1.5)
     val compliantDemand = ConstantFlowDemand(.5)
     val randomizedStart = true
@@ -203,6 +204,34 @@ object Simulations {
     sim.runFor(T)
   }
   
+  def launchLLFParallelRouting() {
+    val adj: Map[Int, List[(Int, LatencyFunction)]] = 
+      Map(1 -> Nil, 
+          0 -> List(
+            (1, SLF(x=>3*x)),
+            (1, SLF(x=>x*x)),
+            (1, SLF(x=>2*(x+1)*(x+1)))
+            )
+          )
+    
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
+    val T = 200
+    val nonCompliantDemand = ConstantFlowDemand(1.5)
+    val compliantDemand = ConstantFlowDemand(.5)
+    val randomizedStart = true
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = HarmonicLearningRate(1.)
+
+    val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    val compliantCommodities = Array(Commodity(0, 1, compliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    
+    val sim = new LLFRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
+    val vis = Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, 2), "f", "l(f)", 300)
+    vis.addPoints(vis.getPlot(0), sim.flows(T)(0).toArray.toStream, sim.latencies(T)(0).toArray.toStream)
+    sim.runFor(T)
+  }
   
   def launchStackelbergRouting() {
     val adj: Map[Int, List[(Int, LatencyFunction, LatencyFunction)]] = Map(

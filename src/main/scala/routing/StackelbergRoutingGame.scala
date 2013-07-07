@@ -107,10 +107,13 @@ class StackelbergRoutingGameSim(
   val optCost = solver.optimalCost
   
   def runFor(T: Int) {
+//    println(socialCosts(T))
+//    println(flows(T)(1))
+    
     System.out.println(network.toJSON())
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
     Visualizer("Path Losses").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
-    Visualizer("Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
+//    Visualizer("Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
     Visualizer("Social Costs").plotLine(socialCosts.take(T), "t", "social cost")
       .plotLine(Stream.continually(optCost).take(T), "t", "social cost")
     Visualizer("Strategies").plotStrategies(strategies.take(T))

@@ -53,8 +53,6 @@ class RoutingGameSim(
     algorithms(commodityId) = new MWAlgorithm(commodity.epsilon, experts, commodity.updateRule)
   }
   
-  
-  
   private def pathToString(edgeList: List[Int]): String = edgeList match {
     case Nil => ""
     case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}

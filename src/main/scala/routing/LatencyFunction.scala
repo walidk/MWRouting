@@ -1,7 +1,10 @@
 package routing
 
 abstract class LatencyFunction { 
+  private val epsilon = 1E-9 
   def apply(x: Double): Double
+  
+  def derivativeAt(x: Double) = (apply(x+epsilon) - apply(x))/epsilon
   
   def +(thatLatency: LatencyFunction): LatencyFunction = { 
     val thisLatency = this

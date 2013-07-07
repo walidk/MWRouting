@@ -6,24 +6,28 @@ import scala.collection.mutable.HashMap
 
 
 object SocialOptimizer{
-  def apply(network: LatencyNetwork) = new SocialOptimizer(network)
   def apply(
       graph: DirectedGraph, 
       latencyFunctions: HashMap[Int, LatencyFunction],
       ncCommodities: Array[Commodity], 
-      cCommodities: Array[Commodity]) = {
-    val commodities = for(
-        Commodity(source, sink, demand, epsilon, updateRule, paths) <- ncCommodities;
-        Commodity(cSource, cSink, cDemand, _, _, _) <- cCommodities;
-        if cSource == source && cSink == sink)
-      yield Commodity(source, sink, demand+cDemand, epsilon, updateRule, paths)
-    println(commodities(0).demand())
-    val network = new LatencyNetwork(graph, latencyFunctions, commodities)
-    new SocialOptimizer(network)
-  } 
+      cCommodities: Array[Commodity]): SocialOptimizer = 
+        new SocialOptimizer(graph, latencyFunctions, ncCommodities, cCommodities)
 }
 
-class SocialOptimizer(network: LatencyNetwork) {
+class SocialOptimizer(
+    graph: DirectedGraph, 
+    latencyFunctions: HashMap[Int, LatencyFunction],
+    ncCommodities: Array[Commodity], 
+    cCommodities: Array[Commodity] = null) {
+  
+  val commodities = for(
+      Commodity(source, sink, demand, epsilon, updateRule, paths) <- ncCommodities;
+      Commodity(cSource, cSink, cDemand, _, _, _) <- cCommodities;
+      if cSource == source && cSink == sink)
+    yield Commodity(source, sink, demand+cDemand, epsilon, updateRule, paths)
+  
+  val network = new LatencyNetwork(graph, latencyFunctions, commodities)
+  
   private lazy val solution = solve()
   lazy val optimalStrategy = unpack(solution)
   lazy val optimalCost = cost(solution)
@@ -74,5 +78,29 @@ class SocialOptimizer(network: LatencyNetwork) {
 
     val solution = solver.minimize(differentiableCost, pack(initialStrategies))
     solution
+  }
+  
+  // LLF
+  lazy val llfFlows = computeLLF()
+  
+  private def computeLLF() = {
+    val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
+    val optLatencies = network.pathLatenciesFromPathFlows(optPathFlows)
+    val llfFlows = new Array[DenseVector[Double]](cCommodities.length)
+    for(i <- llfFlows.indices) {
+      val strategy = optimalStrategy(i)
+      val cDemand = cCommodities(i).demand()
+      val paths = cCommodities(i).paths
+      val orderedPathIndices = paths.indices.sortBy(optLatencies(i)(_)).reverse
+      llfFlows(i) = DenseVector.zeros[Double](paths.length)
+      var allocated = 0.
+      var j = 0
+      while(allocated < cDemand && j < paths.length) {
+        llfFlows(i)(j) = math.min(optPathFlows(i)(j), cDemand - allocated)
+        allocated += llfFlows(i)(j)
+        j += 1
+      }
+    }
+    llfFlows
   }
 }

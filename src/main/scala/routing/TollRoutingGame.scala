@@ -97,7 +97,7 @@ class TollRoutingGameSim(
   val latencies = coordinator.gameStateStream.map(_.pathLatencies)
   val losses = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-  val solver = new SocialOptimizer(network)
+  val solver = new SocialOptimizer(graph, latencyFunctions, commodities)
   val optStrategy = solver.optimalStrategy
   val optCost = solver.optimalCost
   
