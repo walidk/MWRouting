@@ -5,13 +5,11 @@ import scala.collection.mutable.HashMap
 import mw._
 
 
-class StackelbergRoutingGame(network: LatencyNetwork, stackelbergNetwork: LatencyNetwork) extends Game {
+class StackelbergRoutingGame(network: LatencyNetwork) extends Game {
   case class NetworkState(
-      pathNCFlows: Array[DenseVector[Double]],
-      pathCFlows: Array[DenseVector[Double]],
       pathFlows: Array[DenseVector[Double]],
       pathLatencies: Array[DenseVector[Double]],
-      pathDLatencies: Array[DenseVector[Double]]
+      pathStackelbergCosts: Array[DenseVector[Double]]
       ) extends GameState
   
   type State = NetworkState 
@@ -21,24 +19,21 @@ class StackelbergRoutingGame(network: LatencyNetwork, stackelbergNetwork: Latenc
   }
   
   override def update(state: State, strategies: Array[DenseVector[Double]]): State = {
-    val nbPaths = strategies.length/2
-    val pathNCFlows = network.pathFlowsFromStrategies(strategies.take(nbPaths))
-    val pathCFlows = stackelbergNetwork.pathFlowsFromStrategies(strategies.takeRight(nbPaths))
-    val pathFlows = (pathNCFlows zip pathCFlows) map ({case(x, y) => x+y})
+    val pathFlows = network.pathFlowsFromStrategies(strategies)
     val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
-    val pathDLatencies = stackelbergNetwork.pathLatenciesFromPathFlows(pathFlows)
-    NetworkState(pathNCFlows, pathCFlows, pathFlows, pathLatencies, pathDLatencies)
+    val pathStackelbergCosts = network.pathStackelbergCostsFromPathFlows(pathFlows)
+    NetworkState(pathFlows, pathLatencies, pathStackelbergCosts)
   }
   
-  protected def getDLatency(state: State)(groupId: Int)(pathId: Int) = 
-    state.pathDLatencies(groupId)(pathId)
+  protected def getStackelbergCost(state: State)(groupId: Int)(pathId: Int) = 
+    state.pathStackelbergCosts(groupId)(pathId)
   
-    protected def getLatency(state: State)(groupId: Int)(pathId: Int) = 
+  protected def getLatency(state: State)(groupId: Int)(pathId: Int) = 
     state.pathLatencies(groupId)(pathId)
   
   def loss(state: State)(expert: Expert): Double = expert match {
     case RoutingExpert(groupId, pathId) => getLatency(state)(groupId)(pathId)
-    case StackelbergRoutingExpert(groupId, pathId) => getDLatency(state)(groupId)(pathId)
+    case StackelbergRoutingExpert(groupId, pathId) => getStackelbergCost(state)(groupId)(pathId)
   }
 }
 
@@ -47,20 +42,12 @@ case class StackelbergRoutingExpert(groupId: Int, pathId: Int) extends Expert
 class StackelbergRoutingGameSim(
   graph: DirectedGraph,
   latencyFunctions: HashMap[Int, LatencyFunction],
-  latencyDerivatives: HashMap[Int, LatencyFunction],
   ncCommodities: Array[Commodity],
   cCommodities: Array[Commodity],
   randomizedStart: Boolean) {
 
-  private val identity = StaticLatencyFunction(x => x)
-  private val stackelbergLatencies = 
-    for((key, dlat) <- latencyDerivatives; lat = latencyFunctions(key))
-      yield key->(lat*identity+dlat)
-  private val network = new LatencyNetwork(graph, latencyFunctions, cCommodities)
-  private val sNetwork = new LatencyNetwork(graph, stackelbergLatencies, ncCommodities)
-  
-  private val game = new StackelbergRoutingGame(network, sNetwork)
-  
+  private val network = new LatencyNetwork(graph, latencyFunctions, ncCommodities++cCommodities)
+  private val game = new StackelbergRoutingGame(network)
   val cAlgorithms = new Array[MWAlgorithm](cCommodities.length)
   val ncAlgorithms = new Array[MWAlgorithm](ncCommodities.length)
   
@@ -96,21 +83,19 @@ class StackelbergRoutingGameSim(
   
   val coordinator = new MWCoordinator[StackelbergRoutingGame](game, ncAlgorithms++cAlgorithms, randomizedStart)
   val strategies = coordinator.strategiesStream
-//  val flows = coordinator.natureStateStream.map(_.pathFlows)
-  val flows = coordinator.gameStateStream.map(state => state.pathNCFlows++state.pathCFlows)
-  val totalFlows = coordinator.gameStateStream.map(state => state.pathFlows)
+  val flows = coordinator.gameStateStream.map(_.pathFlows)
   val latencies = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-  val socialCosts = totalFlows.map(network.socialCostFromPathFlows(_))
-  val solver = SocialOptimizer(graph, latencyFunctions, ncCommodities, cCommodities)
+  val socialCosts = flows.map(network.socialCostFromPathFlows(_))
+  
+  val solver = new SocialOptimizer(network)
   val optStrategy = solver.optimalStrategy
   val optCost = solver.optimalCost
   
   def runFor(T: Int) {
+    println(optCost)
 //    println(socialCosts(T))
 //    println(flows(T)(1))
-    
-    System.out.println(network.toJSON())
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
     Visualizer("Path Losses").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
 //    Visualizer("Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)

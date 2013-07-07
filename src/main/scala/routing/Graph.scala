@@ -101,23 +101,4 @@ object DirectedGraph{
     }
     (graph, latencyFunctions)
   }
-  
-  def graphAndLatenciesAndDerivativesFromAdjMap(adj: Map[Int, List[(Int, LatencyFunction, LatencyFunction)]]): (DirectedGraph, HashMap[Int, LatencyFunction], HashMap[Int, LatencyFunction]) = { 
-    val graph = new DirectedGraph()
-    val latencyFunctions = new HashMap[Int, LatencyFunction]
-    val latencyDerivatives = new HashMap[Int, LatencyFunction]
-    
-    for(id <- adj.keys)
-      graph.addNode(new Node(id))
-    val nodes = graph.nodes
-    
-    for((fromId, neighb) <- adj; (toId, lat, dLat) <- neighb){
-      val from = nodes(fromId)
-      val to = nodes(toId)
-      val edge = graph.addEdge(from, to)
-      latencyFunctions(edge.id) = lat
-      latencyDerivatives(edge.id) = dLat
-    }
-    (graph, latencyFunctions, latencyDerivatives)
-  }
 }

@@ -5,7 +5,7 @@ import scala.collection.mutable.HashMap
 import mw._
 
 
-class TollRoutingGame(network: LatencyNetwork, tollNetwork: LatencyNetwork, tollDelay: Int, tollInterval: Int = 1) extends Game {
+class TollRoutingGame(network: LatencyNetwork, tollDelay: Int, tollInterval: Int = 1) extends Game {
   case class NetworkState(
       time: Int,
       pathFlows: Array[DenseVector[Double]],
@@ -28,7 +28,7 @@ class TollRoutingGame(network: LatencyNetwork, tollNetwork: LatencyNetwork, toll
     val time = state.time+1
     val pathFlows = network.pathFlowsFromStrategies(strategies)
     val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
-    val pathTolls = tollNetwork.pathLatenciesFromPathFlows(pathFlows)
+    val pathTolls = network.pathTollsFromPathFlows(pathFlows)
     val futurePathTolls = 
       if(time%tollInterval == 0) 
         state.futurePathTolls.tail:::List(pathTolls)
@@ -53,21 +53,13 @@ case class TollRoutingExpert(groupId: Int, pathId: Int) extends Expert
 class TollRoutingGameSim(
   graph: DirectedGraph,
   latencyFunctions: HashMap[Int, LatencyFunction],
-  latencyDerivatives: HashMap[Int, LatencyFunction],
   commodities: Array[Commodity],
   tollDelay: Int,
   tollInterval: Int,
   randomizedStart: Boolean) {
 
-  private val identity = StaticLatencyFunction(x=>x)
-  private val tollFunctions =
-    for((key, dlat)<-latencyDerivatives)
-      yield key->dlat*identity
   private val network = new LatencyNetwork(graph, latencyFunctions, commodities)
-  private val tollNetwork = new LatencyNetwork(graph, tollFunctions, commodities)
-  
-  private val game = new TollRoutingGame(network, tollNetwork, tollDelay, tollInterval)
-  
+  private val game = new TollRoutingGame(network, tollDelay, tollInterval)
   val algorithms = new Array[MWAlgorithm](commodities.length)
   
   for(commodityId <- algorithms.indices) {
@@ -97,12 +89,13 @@ class TollRoutingGameSim(
   val latencies = coordinator.gameStateStream.map(_.pathLatencies)
   val losses = coordinator.lossStream
   val avgLatencies = coordinator.averageLossStream
-  val solver = new SocialOptimizer(graph, latencyFunctions, commodities)
+  val solver = new SocialOptimizer(network)
   val optStrategy = solver.optimalStrategy
   val optCost = solver.optimalCost
   
   def runFor(T: Int) {
-    System.out.println(network.toJSON())
+//    System.out.println(network.toJSON())
+    println(optCost)
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
 //    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "lat(t)", legend)
     Visualizer("Path tolls").plotLineGroups(tolls.take(T), "t", "toll(t)", legend)
