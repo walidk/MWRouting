@@ -4,8 +4,8 @@ abstract class LearningRate {
   def apply(stateHistory: List[GameState]): Int => Double
 }
 
-case class ConstantLearningRate(epsilon: Double) extends LearningRate {
-  private val f: Int=>Double = t=>epsilon
+case class ConstantLearningRate(maxLoss: Double) extends LearningRate {
+  private val f: Int=>Double = t=>1./maxLoss
   def apply(stateHistory: List[GameState]) = f 
 }
 
