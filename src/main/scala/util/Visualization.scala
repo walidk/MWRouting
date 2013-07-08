@@ -23,7 +23,7 @@ class Visualizer(title: String) {
     fig.refresh()
   }
 
-  def addLine(pl: Plot, ys: Stream[Double], legend: String) {
+  def addLineDefault(pl: Plot, ys: Stream[Double], legend: String = "") {
     val xs = Stream.range(0, ys.size).map(_.doubleValue)
     addLine(pl, xs, ys, legend)
   }
@@ -39,11 +39,12 @@ class Visualizer(title: String) {
   def plotLine(
     line: Stream[Double],
     xLabel: String,
-    yLabel: String) = {
+    yLabel: String,
+    legend: String = "") = {
     val pl = getPlot(0);
     pl.xlabel = xLabel
     pl.ylabel = yLabel
-    addLine(pl, line, "")
+    addLineDefault(pl, line, legend)
     this
   }
   
@@ -60,7 +61,7 @@ class Visualizer(title: String) {
     ) {
       pl.xlabel = xLabel
       pl.ylabel = yLabel
-      addLine(pl, line, leg)
+      addLineDefault(pl, line, leg)
     }
     this
   }

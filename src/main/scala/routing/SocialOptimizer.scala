@@ -63,7 +63,9 @@ class SocialOptimizer(network: LatencyNetwork) {
   }
   
   // LLF
-  def computeLLFStrategy() = {
+  lazy val LLFStrategy = computeLLFStrategy()
+  
+  private def computeLLFStrategy() = {
     // First, we compute the path flows for all commodities
     // Only the second half of the commodities are compliant
     val nbCommodities = network.commodities.length/2

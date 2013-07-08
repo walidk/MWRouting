@@ -22,8 +22,8 @@ class LLFRoutingGameSim(
   private val solver = new SocialOptimizer(network)
   private val optStrategy = solver.optimalStrategy
   private val optCost = solver.optimalCost
-  private val llfStrategy: Array[DenseVector[Double]] = solver.computeLLFStrategy()
-  private val game = new LLFRoutingGame(network, llfStrategy)
+  private val LLFStrategy = solver.LLFStrategy
+  private val game = new LLFRoutingGame(network, LLFStrategy)
   
   val algorithms = new Array[MWAlgorithm](ncCommodities.length)
   
@@ -56,12 +56,12 @@ class LLFRoutingGameSim(
   def runFor(T: Int) {
 //    println(socialCosts(T))
 //    println(llfFlows(0))
-    System.out.println(network.toJSON())
+//    System.out.println(network.toJSON())
     
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
     Visualizer("Path Losses").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
-    Visualizer("Social Costs").plotLine(socialCosts.take(T), "t", "social cost")
-      .plotLine(Stream.continually(optCost).take(T), "t", "social cost")
+    Visualizer("Social Costs").plotLine(socialCosts.take(T), "t", "social cost", "LLF")
+      .plotLine(Stream.continually(optCost).take(T), "t", "social cost", "Social opt")
     Visualizer("Strategies").plotStrategies(strategies.take(T))
   }
 }
