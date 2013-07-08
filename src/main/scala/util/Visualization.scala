@@ -3,6 +3,8 @@ package util
 import breeze.plot._
 import breeze.linalg._
 import routing.LatencyFunction
+import java.awt.BasicStroke
+
 
 // Companion object
 object Visualizer {
@@ -10,25 +12,41 @@ object Visualizer {
 }
 
 class Visualizer(title: String) {
+  private val dashedStroke = 
+    new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1.0f, Array(1.0f, 6.0f), 0.0f)
+  
   val fig = new Figure(title)
+  private var nbPlots = 1;
   fig.clear()
 
-  def getPlot(i: Int) = fig.subplot(i + 1, 1, i)
-
+  def getPlot(i: Int) = {
+    nbPlots = math.max(nbPlots, i+1)
+    fig.subplot(nbPlots, 1, i)
+  }
+  
   // main plot functions
-  def addLine(pl: Plot, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
+  private def addLine(i: Int, xs: Stream[Double], ys: Stream[Double], legend: String = "", dashed: Boolean = false) {
+    val pl = getPlot(i)
     pl += plot(xs, ys, name = legend)
     if (!legend.isEmpty())
       pl.legend = true
     fig.refresh()
+    
+    if(dashed){
+      val xyPlot = pl.chart.getXYPlot()
+      val renderer = xyPlot.getRenderer(xyPlot.getRendererCount()-1);
+      if(renderer != null)
+        renderer.setSeriesStroke(0, dashedStroke)
+    }
   }
 
-  def addLineDefault(pl: Plot, ys: Stream[Double], legend: String = "") {
+  private def addLineDefault(i: Int, ys: Stream[Double], legend: String = "", dashed: Boolean = false) {
     val xs = Stream.range(0, ys.size).map(_.doubleValue)
-    addLine(pl, xs, ys, legend)
+    addLine(i, xs, ys, legend, dashed)
   }
 
-  def addPoints(pl: Plot, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
+  def addPoints(i: Int, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
+    val pl = getPlot(i)
     pl += plot(xs, ys, '.', "black")
     if (!legend.isEmpty())
       pl.legend = true
@@ -40,11 +58,12 @@ class Visualizer(title: String) {
     line: Stream[Double],
     xLabel: String,
     yLabel: String,
-    legend: String = "") = {
+    legend: String = "",
+    dashed: Boolean = false) = {
     val pl = getPlot(0);
     pl.xlabel = xLabel
     pl.ylabel = yLabel
-    addLineDefault(pl, line, legend)
+    addLineDefault(0, line, legend, dashed)
     this
   }
   
@@ -52,7 +71,8 @@ class Visualizer(title: String) {
     linesStream: Stream[Array[DenseVector[Double]]],
     xLabel: String,
     yLabel: String,
-    legend: Array[Array[String]]) = {
+    legend: Array[Array[String]],
+    dashed: Boolean = false) = {
     val lineGroups = linesStream.map(_.map(_.toArray))
     for (
       (lineGroup, i) <- lineGroups.transpose zipWithIndex;
@@ -61,7 +81,7 @@ class Visualizer(title: String) {
     ) {
       pl.xlabel = xLabel
       pl.ylabel = yLabel
-      addLineDefault(pl, line, leg)
+      addLineDefault(i, line, leg, dashed)
     }
     this
   }
@@ -77,7 +97,7 @@ class Visualizer(title: String) {
     pl.ylabel = yLabel
     val xs = linspace(domain._1, domain._2, nbPoints).toArray.toStream
     for (f <- functions)
-      addLine(pl, xs, xs map f)
+      addLine(0, xs, xs map f)
     this
   }
 
@@ -104,14 +124,13 @@ class Visualizer(title: String) {
         verticesx(k) = math.cos(theta)
         verticesy(k) = math.sin(theta)
       }
-      val pl = fig.subplot(1, i + 1, i)
       val pointsx = st.map(_ dot DenseVector(verticesx))
       val pointsy = st.map(_ dot DenseVector(verticesy))
-      addLine(pl, verticesx.toStream ++ verticesx.take(1), verticesy.toStream ++ verticesy.take(1))
+      addLine(i, verticesx.toStream ++ verticesx.take(1), verticesy.toStream ++ verticesy.take(1))
       if (usePoints)
-        addPoints(pl, pointsx, pointsy)
+        addPoints(i, pointsx, pointsy)
       else
-        addLine(pl, pointsx, pointsy)
+        addLine(i, pointsx, pointsy)
     }
     this
   }

@@ -90,6 +90,7 @@ class StackelbergRoutingGameSim(
   val ncLegend = ncCommodities.map(_.paths.map(pathToString))
   val cLegend = ncCommodities.map(_.paths.map(pathToString(_) + " (compliant)"))
   val legend = ncLegend ++ cLegend
+  val legendLLF = legend.map(_.map(_+" (LLF)"))
   
   // Streams
   val strategies = coordinator.strategiesStream
@@ -108,13 +109,13 @@ class StackelbergRoutingGameSim(
 //    println(socialCosts(T))
 //    println(LLFsocialCosts(T))
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
-    Visualizer("LLF Path Flows").plotLineGroups(LLFflows.take(T), "t", "f(t)", legend)
+      .plotLineGroups(LLFflows.take(T), "t", "f(t)", legendLLF, dashed = true)
     Visualizer("Path Losses").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
     Visualizer("LLF Path Losses").plotLineGroups(LLFlatencies.take(T), "t", "l(t)", legend)
 //    Visualizer("Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
     Visualizer("Social Costs")
       .plotLine(socialCosts.take(T), "t", "social cost", "MW optimizer")
-      .plotLine(LLFsocialCosts.take(T), "t", "social cost", "LLF")
+      .plotLine(LLFsocialCosts.take(T), "t", "social cost", "LLF", dashed = true)
       .plotLine(Stream.continually(optCost).take(T), "t", "social cost", "Social optimum")
     Visualizer("Strategies").plotStrategies(strategies.take(T))
     Visualizer("Strategies (LLF)").plotStrategies(LLFstrategies.take(T))
