@@ -13,9 +13,10 @@ object main {
 //    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchStackelbergRouting()
-    Simulations.launchStackelbergParallelRouting()
+//    Simulations.launchStackelbergParallelRouting()
 //    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
+    Simulations.launchOptimalConstantTollRouting()
 //    Simulations.launchTollParallelRouting()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
@@ -243,6 +244,26 @@ object Simulations {
         Commodity(7, 8, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
     
     val sim = new TollRoutingGameSim(graph, latencyFunctions, commodities, tollDelay, tollInterval, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  def launchOptimalConstantTollRouting() {
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap)
+    val T = 400
+    val randomizedStart = true
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = 
+//      ConstantLearningRate(1.)
+      HarmonicLearningRate(1.)
+    
+    val commodities = Array(
+        Commodity(0, 1, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+    
+    val sim = new OptimalConstantTollRoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
     sim.runFor(T)
   }
   
