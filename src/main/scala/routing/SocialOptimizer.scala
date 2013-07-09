@@ -31,7 +31,7 @@ class SocialOptimizer(network: LatencyNetwork) {
       yield strategyVector.slice(start, end)
   }
   
-  def cost(strategyVector: DenseVector[Double]): Double = {
+  private def cost(strategyVector: DenseVector[Double]): Double = {
     val strategies = unpack(strategyVector)
     val pathFlows = network.pathFlowsFromStrategies(strategies)
     network.socialCostFromPathFlows(pathFlows)
@@ -71,8 +71,9 @@ class SocialOptimizer(network: LatencyNetwork) {
     val nbCommodities = network.commodities.length/2
     val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
     val optLatencies = network.pathLatenciesFromPathFlows(optPathFlows)
-    
-    val cPathFlows = optPathFlows.takeRight(nbCommodities)
+    val ncFlows = optPathFlows.take(nbCommodities)
+    val cFlows = optPathFlows.takeRight(nbCommodities)
+    val pathFlows = for((cFlow, ncFlow) <- cFlows.zip(ncFlows)) yield cFlow + ncFlow
     val cLatencies = optLatencies.takeRight(nbCommodities)
     val cCommodities = network.commodities.takeRight(nbCommodities)
     
@@ -85,12 +86,29 @@ class SocialOptimizer(network: LatencyNetwork) {
       var allocated = 0.
       var j = 0
       while(allocated < cDemand && j < paths.length) {
-        llfStrategy(i)(j) = math.min(cPathFlows(i)(j), cDemand - allocated)
+        llfStrategy(i)(j) = math.min(pathFlows(i)(j), cDemand - allocated)
         allocated += llfStrategy(i)(j)
         j += 1
       }
       llfStrategy(i) /= llfStrategy(i).norm(1)
     }
     llfStrategy
+  }
+  
+  // Scale
+  lazy val scaleStrategy = computeScaleStrategy()
+  
+  private def computeScaleStrategy() = {
+    // First, we compute the path flows for all commodities
+    // Only the second half of the commodities are compliant
+    val nbCommodities = network.commodities.length/2
+    val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
+    val ncFlows = optPathFlows.take(nbCommodities)
+    val cFlows = optPathFlows.takeRight(nbCommodities)
+    val pathFlows = for((cFlow, ncFlow) <- cFlows.zip(ncFlows)) yield cFlow + ncFlow
+    println("opt2"+pathFlows(0))
+    val scaleStrategy = pathFlows.map(flows => flows/flows.norm(1))
+    println("scale"+scaleStrategy(0))
+    scaleStrategy
   }
 }

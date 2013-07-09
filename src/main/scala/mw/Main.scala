@@ -12,11 +12,11 @@ object main {
 //    Simulations.launchTimeVaryingParallelRoutingGame()
 //    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
-//    Simulations.launchStackelbergRouting()
-//    Simulations.launchStackelbergParallelRouting()
+    Simulations.launchNoRegretSocialRouting()
+//    Simulations.launchNoRegretSocialParallelRouting()
 //    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
-    Simulations.launchOptimalConstantTollRouting()
+//    Simulations.launchOptimalConstantTollRouting()
 //    Simulations.launchTollParallelRouting()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
@@ -165,7 +165,7 @@ object Simulations {
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, demand()), "f", "l(f)", 300)
   }
   
-  def launchStackelbergParallelRouting() {
+  def launchNoRegretSocialParallelRouting() {
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(parallelAdjacencyMap)
     val T = 200
     val nonCompliantDemand = ConstantFlowDemand(1.5)
@@ -179,7 +179,7 @@ object Simulations {
     val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
     val compliantCommodities = Array(Commodity(0, 1, compliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
     
-    val sim = new StackelbergRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
+    val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
   }
   
@@ -201,7 +201,7 @@ object Simulations {
     sim.runFor(T)
   }
   
-  def launchStackelbergRouting() {
+  def launchNoRegretSocialRouting() {
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap)
     val T = 100
     val randomizedStart = true
@@ -220,7 +220,7 @@ object Simulations {
         Commodity(2, 3, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
         Commodity(7, 8, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
     
-    val sim = new StackelbergRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
+    val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
   }
   
