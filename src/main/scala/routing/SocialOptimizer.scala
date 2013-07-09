@@ -13,6 +13,7 @@ class SocialOptimizer(network: LatencyNetwork) {
   private lazy val solution = solve()
   lazy val optimalStrategy = unpack(solution)
   lazy val optimalCost = cost(solution)
+  lazy val optimalTotalPathFlows = computeOptTotalPathFlows()
   
   private val cardinalities = network.commodities.map(_.paths.length)
   private val indexPairs = new Array[(Int, Int)](cardinalities.length)
@@ -48,6 +49,8 @@ class SocialOptimizer(network: LatencyNetwork) {
       val normal = simplexNormal(n)
       val center = simplexCenter(n)
       val projected = v - normal * ((v-center).dot(normal))
+      for(i<-0 to n-1)
+        projected(i) = math.max(projected(i), 0)
       projected / projected.norm(1)
     }
     
@@ -62,6 +65,16 @@ class SocialOptimizer(network: LatencyNetwork) {
     solution
   }
   
+  private def computeOptTotalPathFlows() = {
+    val nbCommodities = network.commodities.length/2
+    val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
+    val ncFlows = optPathFlows.take(nbCommodities)
+    val cFlows = optPathFlows.takeRight(nbCommodities)
+    val totalPathFlows = for((cFlow, ncFlow) <- cFlows.zip(ncFlows)) yield cFlow + ncFlow
+    totalPathFlows
+  }
+  
+  
   // LLF
   lazy val LLFStrategy = computeLLFStrategy()
   
@@ -71,9 +84,6 @@ class SocialOptimizer(network: LatencyNetwork) {
     val nbCommodities = network.commodities.length/2
     val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
     val optLatencies = network.pathLatenciesFromPathFlows(optPathFlows)
-    val ncFlows = optPathFlows.take(nbCommodities)
-    val cFlows = optPathFlows.takeRight(nbCommodities)
-    val pathFlows = for((cFlow, ncFlow) <- cFlows.zip(ncFlows)) yield cFlow + ncFlow
     val cLatencies = optLatencies.takeRight(nbCommodities)
     val cCommodities = network.commodities.takeRight(nbCommodities)
     
@@ -81,13 +91,14 @@ class SocialOptimizer(network: LatencyNetwork) {
     for(i <- llfStrategy.indices) {
       val cDemand = cCommodities(i).demand()
       val paths = cCommodities(i).paths
-      val orderedPathIndices = paths.indices.sortBy(cLatencies(i)(_)).reverse
+      val orderedPathIndices = paths.indices.sortBy(-cLatencies(i)(_))
       llfStrategy(i) = DenseVector.zeros[Double](paths.length)
       var allocated = 0.
       var j = 0
       while(allocated < cDemand && j < paths.length) {
-        llfStrategy(i)(j) = math.min(pathFlows(i)(j), cDemand - allocated)
-        allocated += llfStrategy(i)(j)
+        val pathId = orderedPathIndices(j)
+        llfStrategy(i)(pathId) = math.min(optimalTotalPathFlows(i)(pathId), cDemand - allocated)
+        allocated += llfStrategy(i)(pathId)
         j += 1
       }
       llfStrategy(i) /= llfStrategy(i).norm(1)
@@ -102,13 +113,7 @@ class SocialOptimizer(network: LatencyNetwork) {
     // First, we compute the path flows for all commodities
     // Only the second half of the commodities are compliant
     val nbCommodities = network.commodities.length/2
-    val optPathFlows = network.pathFlowsFromStrategies(optimalStrategy)
-    val ncFlows = optPathFlows.take(nbCommodities)
-    val cFlows = optPathFlows.takeRight(nbCommodities)
-    val pathFlows = for((cFlow, ncFlow) <- cFlows.zip(ncFlows)) yield cFlow + ncFlow
-    println("opt2"+pathFlows(0))
-    val scaleStrategy = pathFlows.map(flows => flows/flows.norm(1))
-    println("scale"+scaleStrategy(0))
+    val scaleStrategy = optimalTotalPathFlows.map(flows => flows/flows.norm(1))
     scaleStrategy
   }
 }
