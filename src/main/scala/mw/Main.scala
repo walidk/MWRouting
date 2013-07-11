@@ -12,8 +12,9 @@ object main {
 //    Simulations.launchTimeVaryingParallelRoutingGame()
 //    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
-    Simulations.launchNoRegretSocialRouting()
-//    Simulations.launchNoRegretSocialParallelRouting()
+//    Simulations.launchNoRegretSocialRouting()
+//    Simulations.launchNoRegretSocialTwoLinkRouting()
+    Simulations.launchNoRegretSocialParallelRouting()
 //    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
 //    Simulations.launchOptimalConstantTollRouting()
@@ -219,6 +220,31 @@ object Simulations {
         Commodity(0, 1, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
         Commodity(2, 3, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
         Commodity(7, 8, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+    
+    val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  def launchNoRegretSocialTwoLinkRouting() {
+    val adjacencyMap: Map[Int, List[(Int, LatencyFunction)]] = 
+    Map(1 -> Nil, 
+        0 -> List(
+          (1, SLF(x=>1)),
+          (1, SLF(x=>x))
+          )
+        )
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap)
+    val T = 100
+    val randomizedStart = false
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = HarmonicLearningRate(1.)
+    
+    val nonCompliantCommodities = 
+      Array(Commodity(0, 1, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    val compliantCommodities = 
+      Array(Commodity(0, 1, ConstantFlowDemand(1.), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
     
     val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
