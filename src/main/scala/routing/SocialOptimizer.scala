@@ -4,11 +4,6 @@ import breeze.linalg.DenseVector
 import breeze.optimize._
 import scala.collection.mutable.HashMap
 
-
-object SocialOptimizer{
-
-}
-
 class SocialOptimizer(network: LatencyNetwork) {
   private lazy val solution = solve()
   lazy val optimalStrategy = unpack(solution)
