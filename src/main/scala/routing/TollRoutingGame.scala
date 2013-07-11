@@ -56,27 +56,11 @@ class TollRoutingGameSim(
   commodities: Array[Commodity],
   tollDelay: Int,
   tollInterval: Int,
-  randomizedStart: Boolean) {
+  randomizedStart: Boolean) extends RoutingGameSimBase(graph) {
 
   private val network = new LatencyNetwork(graph, latencyFunctions, commodities)
   private val game = new TollRoutingGame(network, tollDelay, tollInterval)
-  val algorithms = new Array[MWAlgorithm](commodities.length)
-  
-  for(commodityId <- algorithms.indices) {
-    val commodity = commodities(commodityId)
-    val epsilon = commodity.epsilon
-    val updateRule = commodity.updateRule
-    val experts: Array[Expert] = 
-      for(pathId <- commodity.paths.indices.toArray) 
-        yield RoutingExpert(commodityId, pathId)
-    algorithms(commodityId) = new MWAlgorithm(epsilon, experts, updateRule)
-  }
-  
-  private def pathToString(edgeList: List[Int]): String = edgeList match {
-    case Nil => ""
-    case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
-    case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
-  }
+  val algorithms = MWAlgorithmsFromCommodities[RoutingExpert](commodities)
   
   val legend = commodities.map(_.paths.map(pathToString))
   

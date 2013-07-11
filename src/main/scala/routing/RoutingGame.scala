@@ -38,27 +38,12 @@ class RoutingGameSim(
   graph: DirectedGraph,
   latencyFunctions: HashMap[Int, LatencyFunction],
   commodities: Array[Commodity],
-  randomizedStart: Boolean) {
+  randomizedStart: Boolean) extends RoutingGameSimBase(graph) {
    
   private val network = new LatencyNetwork(graph, latencyFunctions, commodities)
   private val game = new RoutingGame(network)
   
-  val algorithms = new Array[MWAlgorithm](commodities.length)
-  for(commodityId <- commodities.indices) {
-    val commodity = commodities(commodityId)
-    val paths = commodity.paths
-    val experts: Array[Expert] = 
-      for(pathId <- paths.indices.toArray) 
-        yield RoutingExpert(commodityId, pathId)
-    algorithms(commodityId) = new MWAlgorithm(commodity.epsilon, experts, commodity.updateRule)
-  }
-  
-  private def pathToString(edgeList: List[Int]): String = edgeList match {
-    case Nil => ""
-    case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
-    case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
-  }
-  
+  val algorithms = MWAlgorithmsFromCommodities[RoutingExpert](commodities)
   val legend = commodities.map(_.paths.map(pathToString))
   val coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
   val strategies = coordinator.strategiesStream

@@ -5,9 +5,9 @@ import scala.collection.mutable.HashMap
 import util.Visualizer
 import mw._
 
-class ApproximateStackelbergRoutingGame(network: LatencyNetwork, compliantStrategy: Array[DenseVector[Double]]) extends RoutingGame(network) {
-  override def update(state: State, strategies: Array[DenseVector[Double]]): State = {
-    super.update(state, strategies++compliantStrategy)
+class ApproximateStackelbergRoutingGame(network: LatencyNetwork, compliantStrategies: Array[DenseVector[Double]]) extends RoutingGame(network) {
+  override def update(state: State, ncStrategies: Array[DenseVector[Double]]): State = {
+    super.update(state, ncStrategies++compliantStrategies)
   }
 }
 
@@ -16,7 +16,7 @@ abstract class ApproximateStackelbergRoutingGameSim(
   latencyFunctions: HashMap[Int, LatencyFunction],
   ncCommodities: Array[Commodity],
   cCommodities: Array[Commodity],
-  randomizedStart: Boolean) {
+  randomizedStart: Boolean) extends RoutingGameSimBase(graph) {
 
   protected val network = new LatencyNetwork(graph, latencyFunctions, ncCommodities++cCommodities)
   protected val solver = new SocialOptimizer(network)
@@ -25,22 +25,7 @@ abstract class ApproximateStackelbergRoutingGameSim(
   protected val compliantStrategy: Array[DenseVector[Double]]
   private val game = new ApproximateStackelbergRoutingGame(network, compliantStrategy)
   
-  val algorithms = new Array[MWAlgorithm](ncCommodities.length)
-  
-  for(commodityId <- ncCommodities.indices) {
-    val commodity = ncCommodities(commodityId)
-    val paths = commodity.paths
-    val experts: Array[Expert] = 
-      for(pathId <- paths.indices.toArray) 
-        yield RoutingExpert(commodityId, pathId)
-    algorithms(commodityId) = new MWAlgorithm(commodity.epsilon, experts, commodity.updateRule)
-  }
-  
-  private def pathToString(edgeList: List[Int]): String = edgeList match {
-    case Nil => ""
-    case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
-    case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
-  }
+  val algorithms = MWAlgorithmsFromCommodities[RoutingExpert](ncCommodities)
   
   val ncLegend = ncCommodities.map(_.paths.map(pathToString))
   val cLegend = ncCommodities.map(_.paths.map(pathToString(_) + " (compliant)"))
