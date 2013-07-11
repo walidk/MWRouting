@@ -44,36 +44,16 @@ class NoRegretSocialRoutingGameSim(
   latencyFunctions: HashMap[Int, LatencyFunction],
   ncCommodities: Array[Commodity],
   cCommodities: Array[Commodity],
-  randomizedStart: Boolean) {
+  randomizedStart: Boolean) extends RoutingGameSimBase(graph) {
 
   private val network = new LatencyNetwork(graph, latencyFunctions, ncCommodities++cCommodities)
   private val game = new NoRegretSocialRoutingGame(network)
-  val cAlgorithms = new Array[MWAlgorithm](cCommodities.length)
-  val ncAlgorithms = new Array[MWAlgorithm](ncCommodities.length)
-  
-  for(commodityId <- cAlgorithms.indices) {
-    val commodity = cCommodities(commodityId)
-    val epsilon = commodity.epsilon
-    val updateRule = commodity.updateRule
-    val cExperts: Array[Expert] = 
-      for(pathId <- cCommodities(commodityId).paths.indices.toArray) 
-        yield NoRegretSocialRoutingExpert(commodityId, pathId)
-    cAlgorithms(commodityId) = new MWAlgorithm(epsilon, cExperts, updateRule)
-  }
-  
-  for(commodityId <- ncAlgorithms.indices) {
-    val commodity = ncCommodities(commodityId)
-    val epsilon = commodity.epsilon
-    val updateRule = commodity.updateRule
-    val ncExperts: Array[Expert] = 
-      for(pathId <- ncCommodities(commodityId).paths.indices.toArray) 
-        yield RoutingExpert(commodityId, pathId)
-    ncAlgorithms(commodityId) = new MWAlgorithm(epsilon, ncExperts, updateRule)
-  }
-  
+  val cAlgorithms = MWAlgorithmsFromCommodities[NoRegretSocialRoutingExpert](cCommodities)
+  val ncAlgorithms = MWAlgorithmsFromCommodities[RoutingExpert](ncCommodities)
+  val nashAlgorithms = MWAlgorithmsFromCommodities[RoutingExpert](ncCommodities++cCommodities)
   val coordinator = new MWCoordinator[NoRegretSocialRoutingGame](game, ncAlgorithms++cAlgorithms, randomizedStart)
   
-  // LLF and scale
+  // LLF, scale, and Nash
   private val solver = new SocialOptimizer(network)
   val optStrategy = solver.optimalStrategy
   val optCost = solver.optimalCost
@@ -81,15 +61,10 @@ class NoRegretSocialRoutingGameSim(
   val scaleStrategy = solver.scaleStrategy
   private val LLFGame = new ApproximateStackelbergRoutingGame(network, LLFStrategy)
   private val scaleGame = new ApproximateStackelbergRoutingGame(network, scaleStrategy)
+  private val NashGame = new RoutingGame(network)
   val LLFcoordinator = new MWCoordinator[ApproximateStackelbergRoutingGame](LLFGame, ncAlgorithms, randomizedStart)
   val scaleCoordinator = new MWCoordinator[ApproximateStackelbergRoutingGame](scaleGame, ncAlgorithms, randomizedStart)
-  
-  
-  private def pathToString(edgeList: List[Int]): String = edgeList match {
-    case Nil => ""
-    case h::Nil => {val edge = graph.edges(h); edge.from.id + "->" + edge.to.id}
-    case h::t => {val edge = graph.edges(h); edge.from.id + "->" + pathToString(t)}
-  }
+  val NashCoordinator = new MWCoordinator[RoutingGame](NashGame, nashAlgorithms, randomizedStart)
   
   val ncLegend = ncCommodities.map(_.paths.map(pathToString))
   val cLegend = ncCommodities.map(_.paths.map(pathToString(_) + " (compliant)"))
@@ -111,14 +86,17 @@ class NoRegretSocialRoutingGameSim(
   val scaleFlows = scaleCoordinator.gameStateStream.map(_.pathFlows)
   val scaleLatencies = scaleCoordinator.lossStream
   val scaleSocialCosts = scaleFlows.map(network.socialCostFromPathFlows(_))
-  
+  val NashSocialCosts = NashCoordinator.gameStateStream.map(state=>network.socialCostFromPathFlows(state.pathFlows))
   
   def runFor(T: Int) {
-    println(scaleStrategy(0))
-    println(LLFStrategy(0))
-//    println(optCost)
-//    println(socialCosts(T))
-//    println(LLFsocialCosts(T))
+    println("Final compliant flows: "+flows(T)(1))
+    println("Scale strategy: "+scaleStrategy(0))
+    println("LLF strategy: "+LLFStrategy(0))
+    
+    println("Social optimal flows: "+solver.optimalTotalPathFlows(0))
+    println("Social opt latencies: "+network.pathLatenciesFromPathFlows(network.pathFlowsFromStrategies(optStrategy))(0))
+    
+    println("Path optimizer costs: "+coordinator.gameStateStream(T).pathStackelbergCosts.toArray.toList)
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
 //      .plotLineGroups(LLFflows.take(T), "t", "f(t)", legendLLF, dashed = true)
     Visualizer("LLF Path Flows").plotLineGroups(LLFflows.take(T), "t", "f(t)", legendLLF)
@@ -130,9 +108,10 @@ class NoRegretSocialRoutingGameSim(
     
     Visualizer("Social Costs")
       .plotLine(socialCosts.take(T), "t", "social cost", "No-regret social optimizer")
-      .plotLine(LLFsocialCosts.take(T), "t", "social cost", "LLF", dashed = true)
-      .plotLine(scaleSocialCosts.take(T), "t", "social cost", "Scale", dashed = true)
+      .plotLine(LLFsocialCosts.take(T), "t", "social cost", "LLF")
+      .plotLine(scaleSocialCosts.take(T), "t", "social cost", "Scale")
       .plotLine(Stream.continually(optCost).take(T), "t", "social cost", "Social optimum", dashed = true)
+      .plotLine(NashSocialCosts.take(T), "t", "social cost", "Nash eq.", dashed = true)
     
 //      Visualizer("Strategies").plotStrategies(strategies.take(T))
   }
