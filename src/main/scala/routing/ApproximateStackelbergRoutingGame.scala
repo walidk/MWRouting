@@ -57,7 +57,7 @@ class LLFRoutingGameSim(
   ncCommodities: Array[Commodity],
   cCommodities: Array[Commodity],
   randomizedStart: Boolean) extends ApproximateStackelbergRoutingGameSim(graph, latencyFunctions, ncCommodities, cCommodities, randomizedStart){
-    protected val compliantStrategy = solver.LLFStrategy
+    lazy val compliantStrategy = solver.LLFStrategy
 }
 
 class ScaleRoutingGameSim(
@@ -66,5 +66,5 @@ class ScaleRoutingGameSim(
   ncCommodities: Array[Commodity],
   cCommodities: Array[Commodity],
   randomizedStart: Boolean) extends ApproximateStackelbergRoutingGameSim(graph, latencyFunctions, ncCommodities, cCommodities, randomizedStart){
-    protected val compliantStrategy = solver.scaleStrategy
+    lazy val compliantStrategy = solver.scaleStrategy
 }
