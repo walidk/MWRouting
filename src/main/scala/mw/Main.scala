@@ -8,13 +8,14 @@ import routing._
 object main {
   def main(args: Array[String]): Unit = {
 //    Simulations.launchParallelRoutingGame()
-//    Simulations.launchNoisyParallelRoutingGame()
+//    Simulations.launchNoisyLatencyParallelRoutingGame()
+    Simulations.launchNoisyDemandParallelRoutingGame()
 //    Simulations.launchTimeVaryingParallelRoutingGame()
 //    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchNoRegretSocialRouting()
 //    Simulations.launchNoRegretSocialTwoLinkRouting()
-    Simulations.launchNoRegretSocialParallelRouting()
+//    Simulations.launchNoRegretSocialParallelRouting()
 //    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
 //    Simulations.launchOptimalConstantTollRouting()
@@ -67,7 +68,7 @@ object Simulations {
   }
   
   
-  def launchNoisyParallelRoutingGame() {
+  def launchNoisyLatencyParallelRoutingGame() {
     val sigma = .1
     val adj: Map[Int, List[(Int, LatencyFunction)]] = 
       Map(1->Nil,
@@ -77,7 +78,7 @@ object Simulations {
             (1, SLF(x => 2 * (x + 1) * (x + 1) - 1)+GaussianNoise(sigma))
           ))
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
-    val flowDemand = ConstantFlowDemand(2.).until(100).then(ConstantFlowDemand(3.))
+    val flowDemand = ConstantFlowDemand(2.).until(100).then(ConstantFlowDemand(3.).until(100))
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
@@ -93,6 +94,23 @@ object Simulations {
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, maxFlow), "f", "l(f)", 300)
   }
   
+  def launchNoisyDemandParallelRoutingGame() {
+    val sigma = .1
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(parallelAdjacencyMap)
+    val flowDemand = ConstantFlowDemand(2.).until(100).then(ConstantFlowDemand(3.).until(200)) + GaussianNoise(.1)
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val epsilon = 
+//      HarmonicLearningRate(1.)
+      ConstantLearningRate(10.)
+    val randomizedStart = true
+    val T = 200
+    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
+    sim.runFor(T)
+    Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, 3), "f", "l(f)", 300)
+  }
   
   def launchTimeVaryingParallelRoutingGame() {
     val adj: Map[Int, List[(Int, LatencyFunction)]] = 

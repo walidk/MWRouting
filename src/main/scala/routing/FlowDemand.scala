@@ -1,6 +1,6 @@
 package routing
 
-abstract class FlowDemand {
+trait FlowDemand {
   def apply(): Double
   
   def +(thatDemand: FlowDemand): FlowDemand = { 
