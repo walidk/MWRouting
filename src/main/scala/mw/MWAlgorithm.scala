@@ -31,7 +31,7 @@ class MWAlgorithm(
       ): DenseVector[Double] = {
     val weights = nextWeights(strategy, losses, epsilon)
     val next = (strategy :* weights)
-      .map(math.max(_, 0.00001)) // to avoid getting stuck in a False Nash
+      .map(math.max(_, 0.001)) // to avoid getting stuck in a False Nash
     
     next :/ next.norm(1)
   }
