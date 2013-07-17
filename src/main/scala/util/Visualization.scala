@@ -135,5 +135,7 @@ class Visualizer(title: String) {
     this
   }
   
-  
+  def exportToPdf(title: String){
+    fig.saveas("fig_"+title+".pdf", 300)
+  }
 }

@@ -54,9 +54,9 @@ class RoutingGameSim(
   
   def runFor(T: Int) {
 //    network.dumpJSON("graph.json")
-    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
-    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
-    Visualizer( "Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
+    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("flows")
+    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend).exportToPdf("latencies")
+    Visualizer( "Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend).exportToPdf("average_latencies")
     Visualizer("Strategies").plotStrategies(strategies.take(T)) 
   }
 }

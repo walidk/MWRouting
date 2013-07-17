@@ -9,9 +9,9 @@ object main {
   def main(args: Array[String]): Unit = {
 //    Simulations.launchParallelRoutingGame()
 //    Simulations.launchNoisyLatencyParallelRoutingGame()
-    Simulations.launchAdaptiveParallelRoutingGame()
+//    Simulations.launchAdaptiveParallelRoutingGame()
 //    Simulations.launchTimeVaryingParallelRoutingGame()
-//    Simulations.launchRoutingGame()
+    Simulations.launchRoutingGame()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchNoRegretSocialRouting()
 //    Simulations.launchNoRegretSocialTwoLinkRouting()
