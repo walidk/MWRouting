@@ -40,12 +40,16 @@ class SocialOptimizer(network: LatencyNetwork) {
     def simplexCenter(n: Int) = DenseVector.ones[Double](n) / n.doubleValue
     
     def projectOnSimplex(v: DenseVector[Double]): DenseVector[Double] = {
-      val n = v.length
-      val normal = simplexNormal(n)
-      val center = simplexCenter(n)
-      val projected = v - normal * ((v-center).dot(normal))
-      for(i<-0 to n-1)
-        projected(i) = math.max(projected(i), 0)
+      val w = v.toArray.sorted.reverse
+      var opt = 0.
+      var sum = 0.
+      for(i <- w.indices){
+        sum+=w(i)
+        if(w(i)>(sum-1)/(i+1))
+          opt = (sum-1)/(i+1)
+      }
+      
+      val projected = v.map(x=>math.max(x - opt, 0))
       projected / projected.norm(1)
     }
     
