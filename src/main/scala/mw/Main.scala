@@ -19,7 +19,7 @@ object main {
 //    Simulations.launchLLFParallelRouting()
 //    Simulations.launchTollRouting()
 //    Simulations.launchOptimalConstantTollRouting()
-//    Simulations.launchTollParallelRouting()
+    Simulations.launchTollParallelRouting()
 //    Simulations.launchZeroSumGame()
 //    Simulations.launchZeroSumGameAdversarial()
   }

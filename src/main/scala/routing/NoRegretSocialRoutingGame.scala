@@ -110,8 +110,8 @@ class NoRegretSocialRoutingGameSim(
       .plotLine(socialCosts.take(T), "t", "social cost", "No-regret social optimizer")
       .plotLine(LLFsocialCosts.take(T), "t", "social cost", "LLF")
       .plotLine(scaleSocialCosts.take(T), "t", "social cost", "Scale")
-      .plotLine(Stream.continually(optCost).take(T), "t", "social cost", "Social optimum", dashed = true)
-      .plotLine(NashSocialCosts.take(T), "t", "social cost", "Nash eq.", dashed = true)
+      .plotDashedLine(Stream.continually(optCost).take(T), "t", "social cost", "Social optimum")
+      .plotDashedLine(NashSocialCosts.take(T), "t", "social cost", "Nash eq.")
     
 //      Visualizer("Strategies").plotStrategies(strategies.take(T))
   }

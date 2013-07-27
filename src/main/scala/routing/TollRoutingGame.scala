@@ -85,7 +85,7 @@ class TollRoutingGameSim(
     Visualizer("Path tolls").plotLineGroups(tolls.take(T), "t", "toll(t)", legend)
     Visualizer("Path Losses (latency + toll)").plotLineGroups(losses.take(T), "t", "loss(t)", legend)
     Visualizer("Social cost").plotLine(socialCosts.take(T), "t", "social cost")
-      .plotLine(Stream.continually(optCost).take(T), "t", "social cost")
+      .plotDashedLine(Stream.continually(optCost).take(T), "t", "social cost")
     Visualizer("Strategies").plotStrategies(strategies.take(T))
   }
 }
