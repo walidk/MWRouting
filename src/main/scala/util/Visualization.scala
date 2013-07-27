@@ -22,6 +22,7 @@ class Visualizer(title: String) {
 
   def getPlot(i: Int) = {
     nbPlots = math.max(nbPlots, i + 1)
+    fig.height = nbPlots * 300;
     fig.subplot(nbPlots, 1, i)
   }
 
@@ -155,6 +156,8 @@ class Visualizer(title: String) {
         new Color(color.getRed(), color.getGreen(), color.getBlue(), 40 + (215 * alphaIterator.next()).intValue)
       }
     }
+    
+    fig.width = 300
     this
   }
   
