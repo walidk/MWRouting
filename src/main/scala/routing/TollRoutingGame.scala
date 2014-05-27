@@ -81,11 +81,16 @@ class TollRoutingGameSim(
 //    System.out.println(network.toJSON())
     println(optCost)
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
+      .exportToPdf("out/tolling/pathFlows")
 //    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "lat(t)", legend)
     Visualizer("Path tolls").plotLineGroups(tolls.take(T), "t", "toll(t)", legend)
+      .exportToPdf("out/tolling/pathTolls")
     Visualizer("Path Losses (latency + toll)").plotLineGroups(losses.take(T), "t", "loss(t)", legend)
+      .exportToPdf("out/tolling/latencyAndToll")
     Visualizer("Social cost").plotLine(socialCosts.take(T), "t", "social cost")
       .plotDashedLine(Stream.continually(optCost).take(T), "t", "social cost")
+      .exportToPdf("out/tolling/socialCost")
     Visualizer("Strategies").plotStrategies(strategies.take(T))
+      .exportToPdf("out/tolling/strategies")
   }
 }
