@@ -4,6 +4,7 @@ import breeze.plot._
 import breeze.linalg._
 import routing.LatencyFunction
 import java.awt.{ BasicStroke, GradientPaint, Color }
+import java.awt.Graphics2D
 
 // Companion object
 object Visualizer {
@@ -13,25 +14,61 @@ object Visualizer {
 // Each instance of Visualizer corresponds to one figure (i.e. one window)
 // the figure can contain several sub-figures, created using getPlot(i)
 class Visualizer(title: String) {
+  class CustomFigure(name: String) extends Figure(name) {
+    def saveAsPDF(filename: String) {
+      def drawPlots(g2d: Graphics2D) {
+        val plotWidth = width / cols
+        val plotHeight = height / rows
+        var px = 0; var py = 0
+        for (opt <- plots) {
+          opt match {
+            case Some(plot) =>
+              plot.chart.draw(g2d, new java.awt.Rectangle(px * plotWidth, py * plotHeight, plotWidth, plotHeight))
+            case None => {}
+          }
+          px = (px + 1) % cols
+          if (px == 0) py = (py + 1) % rows
+        }
+      }
+      
+      ExportGraphics.writeFile(new java.io.File(filename), draw = drawPlots _, width = width, height = height, dpi = 72)
+    }
+  }
+
   private val dashedStroke =
     new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1.0f, Array(1.0f, 6.0f), 0.0f)
 
-  val fig = new Figure(title)
+  val fig = new CustomFigure(title)
   private var nbPlots = 1;
   fig.clear()
+  setFigureWidth(450)
+
+  def setFigureWidth(width: Int) {
+    fig.width = width
+  }
+
+  def setFigureHeight(height: Int) {
+    fig.height = height
+  }
 
   def getPlot(i: Int) = {
     nbPlots = math.max(nbPlots, i + 1)
-    fig.height = nbPlots * 300;
+    setFigureHeight(nbPlots * 300);
     fig.subplot(nbPlots, 1, i)
   }
+  
+//  def getPlot(i: Int) = {
+//    nbPlots = math.max(nbPlots, i + 1)
+//    setFigureWidth(nbPlots * 300);
+//    fig.subplot(1, nbPlots, i)
+//  }
 
   def setDashed(i: Int) {
     val xyPlot = getPlot(i).chart.getXYPlot()
     val renderer = xyPlot.getRenderer(xyPlot.getRendererCount() - 1);
-      renderer.setSeriesStroke(0, dashedStroke)
+    renderer.setSeriesStroke(0, dashedStroke)
   }
-  
+
   // main plot functions
   private def addLine(i: Int, xs: Stream[Double], ys: Stream[Double], legend: String = "") {
     val pl = getPlot(i)
@@ -62,7 +99,7 @@ class Visualizer(title: String) {
     addLineDefault(0, line, legend)
     this
   }
-  
+
   def plotDashedLine(line: Stream[Double], xLabel: String, yLabel: String, legend: String = "") = {
     plotLine(line, xLabel, yLabel, legend)
     setDashed(0)
@@ -110,16 +147,17 @@ class Visualizer(title: String) {
     nbPoints: Int = 100) = {
     val functions = latencyFunctions.map(lat => x => lat(x))
     plotFunctions(functions, domain, xLabel, yLabel, nbPoints)
+    setFigureWidth(200)
     this
   }
 
   def plotStrategies(
     strategies: Stream[Array[DenseVector[Double]]],
     usePoints: Boolean = false) = {
-    
+
     def makeCycle(array: Array[Double]) = array.toStream ++ array.take(1)
-    
-    for ((st, i) <- strategies.transpose zipWithIndex) {
+
+    for ((st, j) <- strategies.transpose zipWithIndex; i = j) {
       val support = st.head.length
       val verticesx = new Array[Double](support)
       val verticesy = new Array[Double](support)
@@ -130,10 +168,10 @@ class Visualizer(title: String) {
       }
       val pointsx = st.map(_ dot DenseVector(verticesx))
       val pointsy = st.map(_ dot DenseVector(verticesy))
-      
+
       addLine(i, makeCycle(verticesx), makeCycle(verticesy))
       getPlot(i).chart.getXYPlot().getRenderer().setSeriesPaint(0, Color.GRAY)
-      
+
       if (usePoints)
         addPoints(i, pointsx, pointsy)
       else {
@@ -144,9 +182,8 @@ class Visualizer(title: String) {
         xyPlot.setRenderer(1, renderer)
       }
     }
-    
-    
-    import org.jfree.chart.renderer.xy.{XYItemRenderer, XYLineAndShapeRenderer}
+
+    import org.jfree.chart.renderer.xy.{ XYItemRenderer, XYLineAndShapeRenderer }
     class GradientRenderer(color: Color, totalPoints: Int) extends XYLineAndShapeRenderer {
       private val alphaStream = (0 to totalPoints - 2).map(x => (x * 1. / totalPoints)).toStream
       private val alphaStreamRec: Stream[Double] = alphaStream #::: alphaStreamRec
@@ -156,12 +193,14 @@ class Visualizer(title: String) {
         new Color(color.getRed(), color.getGreen(), color.getBlue(), 40 + (215 * alphaIterator.next()).intValue)
       }
     }
-    
-    fig.width = 300
+
+    setFigureWidth(300)
+//    setFigureHeight(300)
     this
   }
-  
-  def exportToPdf(title: String){
-    fig.saveas("fig_"+title+".pdf", 300)
+
+  def exportToPdf(title: String) {
+    fig.refresh()
+    fig.saveAsPDF(title + ".pdf")
   }
 }

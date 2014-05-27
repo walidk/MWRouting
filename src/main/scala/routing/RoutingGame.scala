@@ -39,7 +39,20 @@ class RoutingGameSim(
   latencyFunctions: HashMap[Int, LatencyFunction],
   commodities: Array[Commodity],
   randomizedStart: Boolean) extends RoutingGameSimBase(graph) {
-   
+  
+  private def exportToCSV(fileName: String, dataStream: Stream[Array[DenseVector[Double]]], header: Array[String]) {
+    import java.io.{File, FileWriter}
+    val writer = new FileWriter(fileName)
+    writer.write("t,")
+    writer.write(header.reduce(_+","+_))
+    for((datum, t) <- dataStream.zipWithIndex){
+      writer.write("\n")
+      writer.write(t+",")
+      writer.write(datum.flatMap(_.toArray).map(_.toString).reduce(_+","+_))
+    }
+    writer.close()
+  }
+  
   private val network = new LatencyNetwork(graph, latencyFunctions, commodities)
   private val game = new RoutingGame(network)
   
@@ -49,16 +62,20 @@ class RoutingGameSim(
   val strategies = coordinator.strategiesStream
   val flows = coordinator.gameStateStream.map(_.pathFlows)
   val latencies = coordinator.lossStream
-  val avgLatencies = coordinator.averageLossStream
-
+  val avgStrategyLatencies = coordinator.averageStrategiesStream.map(s => network.pathLatenciesFromPathFlows(network.pathFlowsFromStrategies(s)))
   
   def runFor(T: Int) {
 //    network.dumpJSON("graph.json")
-    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend)
-    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend)
-//      .exportToPdf("latencies")
-    Visualizer( "Average Latencies").plotLineGroups(avgLatencies.take(T), "t", "Avg latency", legend)
-//      .exportToPdf("average_latencies")
-    Visualizer("Strategies").plotStrategies(strategies.take(T)) 
+    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("out/flows")
+    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend).exportToPdf("out/latencies")
+    Visualizer("Average Latencies").plotLineGroups(avgStrategyLatencies.take(T), "t", "Avg strategy latency", legend).exportToPdf("out/avg_strategy_latencies")
+    val v = Visualizer("Strategies").plotStrategies(strategies.take(T))
+//    Visualizer("Learning rates").plotLineGroups(learningRates.take(T), "t", "epsilon", legend)
+//    .exportToPdf("out/learning_rates")
+//    v.exportToPdf("out/strategies")
+    
+    // export data to a csv file
+    exportToCSV("out/flows.csv", flows.take(T), Array("f11", "f12", "f13", "f21", "f22", "f23"))
+    exportToCSV("out/latencies.csv", latencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
   }
 }
