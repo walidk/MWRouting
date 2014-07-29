@@ -38,7 +38,8 @@ class MWCoordinator[G<:Game](
       time: Int, 
       gameHistory: List[GameState], 
       losses: Array[DenseVector[Double]],
-      strategies: Array[DenseVector[Double]]) 
+      strategies: Array[DenseVector[Double]],
+      epsilons: Array[Double]) 
   
   /* Main update function. Takes the current global state and returns the 
    * updated state.
@@ -48,8 +49,11 @@ class MWCoordinator[G<:Game](
    * Then computes the next losses.
    */
   private def next(state: GlobalState): GlobalState = state match {
-    case GlobalState(time, natureHistory, losses, strategies) => {
+    case GlobalState(time, natureHistory, losses, strategies, _) => {
       val nextGameState = game.update(natureHistory.head, strategies)
+      val epsilons =
+        for(alg <- algorithms)
+          yield alg.epsilon(natureHistory)(time)
       val nextStrategies = 
         for(id <- algorithms.indices;
           alg = algorithms(id);
@@ -59,7 +63,7 @@ class MWCoordinator[G<:Game](
           nextStrategy = alg.nextStrategy(strategy, loss, epsilon))
           yield nextStrategy
       val nextLosses = algorithmLosses(nextGameState)
-      GlobalState(time+1, nextGameState::natureHistory, nextLosses, nextStrategies.toArray)
+      GlobalState(time+1, nextGameState::natureHistory, nextLosses, nextStrategies.toArray, epsilons)
     }
   }
   
@@ -72,8 +76,15 @@ class MWCoordinator[G<:Game](
   private val stateStream: Stream[GlobalState] = {
     val strategies = algorithms.map(_.initialStrategy(randomizedStart))
     val natureState = game.initialState(strategies)
+    val natureHistory = List(natureState)
     val losses = algorithmLosses(natureState)
-    val state = GlobalState(0, List(natureState), losses, strategies) 
+    val epsilons = 
+      for(id <- algorithms.indices;
+        alg = algorithms(id);
+        strategy = strategies(id))
+      yield
+        alg.epsilon(natureHistory)(0)
+    val state = GlobalState(0, natureHistory, losses, strategies, epsilons.toArray)
     state #:: stateStream map next
   }
   
