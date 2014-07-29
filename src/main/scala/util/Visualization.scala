@@ -185,7 +185,7 @@ class Visualizer(title: String) {
 
     import org.jfree.chart.renderer.xy.{ XYItemRenderer, XYLineAndShapeRenderer }
     class GradientRenderer(color: Color, totalPoints: Int) extends XYLineAndShapeRenderer {
-      private val alphaStream = (0 to totalPoints - 2).map(x => (x * 1. / totalPoints)).toStream
+      private val alphaStream = (0 to totalPoints - 2).map(x => (x * 1.0 / totalPoints)).toStream
       private val alphaStreamRec: Stream[Double] = alphaStream #::: alphaStreamRec
       private val alphaIterator = alphaStreamRec.toIterator
 

@@ -4,7 +4,7 @@ import mw._
 import breeze.linalg.DenseVector
 
 abstract class AdaptiveRoutingLearningRate(maxLoss: Double, historySize: Int, commodityId: Int) extends LearningRate {
-  protected var alpha = 1.
+  protected var alpha = 1.0
   private val f: Int=>Double = t=>alpha
   
   // use a duck type here: all we need is that the state provides
@@ -38,12 +38,12 @@ case class SimpleAdaptiveRoutingLearningRate(maxLoss: Double, commodityId: Int)
   extends AdaptiveRoutingLearningRate(maxLoss, 3, commodityId) 
 {
   def updateHeuristic(pathLatencies: List[DenseVector[Double]], pathFlows: List[DenseVector[Double]]): Double = (pathLatencies, pathFlows) match {
-    case (Nil, _) | (_, Nil) => 1.
+    case (Nil, _) | (_, Nil) => 1.0
     case _ => {
       val strategies = pathFlows.map(flows => flows/flows.sum).map(_.toArray)
       val oscillations = strategies.transpose.map(x => 
         if((x(0)-x(1))*(x(1)-x(2))>=0)
-          0.
+          0.0
         else
           math.min(math.abs(x(0) - x(1)),math.abs(x(1) - x(2))) 
         )
@@ -54,7 +54,7 @@ case class SimpleAdaptiveRoutingLearningRate(maxLoss: Double, commodityId: Int)
         val minLatencies = pathLatencies.map(_.min)
         val maxLatency = pathLatencies.map(_.max).max
         val distances = for((meanLat, minLat) <- meanLatencies.zip(minLatencies)) yield (meanLat - minLat)/maxLatency
-        1. + distances.min/10
+        1.0 + distances.min/10
       }
     }
   }

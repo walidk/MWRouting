@@ -41,8 +41,8 @@ class SocialOptimizer(network: LatencyNetwork) {
     
     def projectOnSimplex(v: DenseVector[Double]): DenseVector[Double] = {
       val w = v.toArray.sorted.reverse
-      var opt = 0.
-      var sum = 0.
+      var opt = 0.0
+      var sum = 0.0
       for(i <- w.indices){
         sum+=w(i)
         if(w(i)>(sum-1)/(i+1))
@@ -92,7 +92,7 @@ class SocialOptimizer(network: LatencyNetwork) {
       val paths = cCommodities(i).paths
       val orderedPathIndices = paths.indices.sortBy(-cLatencies(i)(_))
       llfStrategy(i) = DenseVector.zeros[Double](paths.length)
-      var allocated = 0.
+      var allocated = 0.0
       var j = 0
       while(allocated < cDemand && j < paths.length) {
         val pathId = orderedPathIndices(j)

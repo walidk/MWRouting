@@ -14,7 +14,7 @@ class MWAlgorithm(
   val nextWeights = updateRule.nextWeights
   
   def uniformStrategy = {
-    val s = DenseVector(experts.map(_=>1.))
+    val s = DenseVector(experts.map(_=>1.0))
     s/s.norm(1)
   }
   

@@ -49,12 +49,12 @@ class ZeroSumGame(PayoffMatrix: DenseMatrix[Double]) extends Game {
   def loss(state: State)(expert: Expert): Double = expert match {
     case ZeroSumGameRowExpert(row) => {
       val pureStrat = DenseVector.zeros[Double](nRows)
-      pureStrat(row) = 1.
+      pureStrat(row) = 1.0
       computeOutcome(pureStrat, state.colStrategy)
     }
     case ZeroSumGameColExpert(col) => {
       val pureStrat = DenseVector.zeros[Double](nCols)
-      pureStrat(col) = 1.
+      pureStrat(col) = 1.0
       -computeOutcome(state.rowStrategy, pureStrat)
     }
   }
