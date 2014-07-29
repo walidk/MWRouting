@@ -39,7 +39,7 @@ class MWCoordinator[G<:Game](
       gameHistory: List[GameState], 
       losses: Array[DenseVector[Double]],
       strategies: Array[DenseVector[Double]],
-      epsilons: Array[Double]) 
+      learningRates: Array[Double]) 
   
   /* Main update function. Takes the current global state and returns the 
    * updated state.
@@ -51,19 +51,19 @@ class MWCoordinator[G<:Game](
   private def next(state: GlobalState): GlobalState = state match {
     case GlobalState(time, natureHistory, losses, strategies, _) => {
       val nextGameState = game.update(natureHistory.head, strategies)
-      val epsilons =
+      val learningRates =
         for(alg <- algorithms)
-          yield alg.epsilon(natureHistory)(time)
+          yield alg.learningRate(natureHistory)(time)
       val nextStrategies = 
         for(id <- algorithms.indices;
           alg = algorithms(id);
           strategy = strategies(id);
           loss = losses(id);
-          epsilon = alg.epsilon(natureHistory)(time);
-          nextStrategy = alg.nextStrategy(strategy, loss, epsilon))
+          learningRate = alg.learningRate(natureHistory)(time);
+          nextStrategy = alg.nextStrategy(strategy, loss, learningRate))
           yield nextStrategy
       val nextLosses = algorithmLosses(nextGameState)
-      GlobalState(time+1, nextGameState::natureHistory, nextLosses, nextStrategies.toArray, epsilons)
+      GlobalState(time+1, nextGameState::natureHistory, nextLosses, nextStrategies.toArray, learningRates)
     }
   }
   
@@ -78,13 +78,13 @@ class MWCoordinator[G<:Game](
     val natureState = game.initialState(strategies)
     val natureHistory = List(natureState)
     val losses = algorithmLosses(natureState)
-    val epsilons = 
+    val learningRates = 
       for(id <- algorithms.indices;
         alg = algorithms(id);
         strategy = strategies(id))
       yield
-        alg.epsilon(natureHistory)(0)
-    val state = GlobalState(0, natureHistory, losses, strategies, epsilons.toArray)
+        alg.learningRate(natureHistory)(0)
+    val state = GlobalState(0, natureHistory, losses, strategies, learningRates.toArray)
     state #:: stateStream map next
   }
   
@@ -122,4 +122,5 @@ class MWCoordinator[G<:Game](
   val averageStrategiesStream = averages(strategiesStream)
   val averageLossStream = averages(lossStream)
   val gameStateStream = mappedStream(_.gameHistory.head)
+  val learningRateStream = mappedStream(_.learningRates)
 }

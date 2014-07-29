@@ -75,12 +75,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
       HarmonicLearningRate(1.0)
 //      ConstantLearningRate(2.)
     val randomizedStart = true
     val T = 100
-    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val commodity = Commodity(0, 1, flowDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
     val maxFlow = commodity.demand()
@@ -102,12 +102,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
 //      HarmonicLearningRate(1.)
       ConstantLearningRate(10.0)
     val randomizedStart = true
     val T = 200
-    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val commodity = Commodity(0, 1, flowDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
     val maxFlow = commodity.demand()
@@ -125,12 +125,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
 //      HarmonicLearningRate(1.)
       SimpleAdaptiveRoutingLearningRate(5.0, 0)
     val randomizedStart = false
     val T = 400
-    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val commodity = Commodity(0, 1, flowDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, 3), "f", "l(f)", 300)
@@ -150,12 +150,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
 //      HarmonicLearningRate(10.0)
       ConstantLearningRate(10.0)
     val randomizedStart = true
     val T = 200
-    val commodity = Commodity(0, 1, flowDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val commodity = Commodity(0, 1, flowDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
     val maxFlow = commodity.demand()
@@ -200,13 +200,13 @@ object Simulations {
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
     val demand = ConstantFlowDemand(75)
     val randomizedStart = true
-    val epsilon = 
+    val learningRate = 
       HarmonicLearningRate(20.9)
     val updateRule = 
       ExponentialUpdate()
 //      PolyUpdate(.5)
 //    FollowTheMeanUpdate()
-    val commodity = Commodity(0, 1, demand, epsilon, updateRule, graph.findLooplessPaths(0, 1))
+    val commodity = Commodity(0, 1, demand, learningRate, updateRule, graph.findLooplessPaths(0, 1))
     val sim = new RoutingGameSim(graph, latencyFunctions, Array(commodity), randomizedStart)
     sim.runFor(T)
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, demand()), "f", "l(f)", 300)
@@ -221,10 +221,10 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = HarmonicLearningRate(1.0)
+    val learningRate = HarmonicLearningRate(1.0)
 
-    val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
-    val compliantCommodities = Array(Commodity(0, 1, compliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1)))
+    val compliantCommodities = Array(Commodity(0, 1, compliantDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1)))
     
     val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
@@ -239,10 +239,10 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = HarmonicLearningRate(1.0)
+    val learningRate = HarmonicLearningRate(1.0)
 
-    val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
-    val compliantCommodities = Array(Commodity(0, 1, compliantDemand, epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+    val nonCompliantCommodities = Array(Commodity(0, 1, nonCompliantDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1)))
+    val compliantCommodities = Array(Commodity(0, 1, compliantDemand, learningRate, updateRule, graph.findLooplessPaths(0, 1)))
     val sim = new LLFRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     val vis = Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, 2), "f", "l(f)", 300)
     sim.runFor(T)
@@ -255,17 +255,17 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = HarmonicLearningRate(1.0)
+    val learningRate = HarmonicLearningRate(1.0)
     
     val nonCompliantCommodities = Array(
-        Commodity(0, 1, ConstantFlowDemand(.8), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
-        Commodity(2, 3, ConstantFlowDemand(.8), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
-        Commodity(7, 8, ConstantFlowDemand(.8), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+        Commodity(0, 1, ConstantFlowDemand(.8), learningRate, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(.8), learningRate, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(.8), learningRate, updateRule, graph.findLooplessPaths(7, 8)))
     
     val compliantCommodities = Array(
-        Commodity(0, 1, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
-        Commodity(2, 3, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
-        Commodity(7, 8, ConstantFlowDemand(.2), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+        Commodity(0, 1, ConstantFlowDemand(.2), learningRate, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(.2), learningRate, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(.2), learningRate, updateRule, graph.findLooplessPaths(7, 8)))
     
     val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
@@ -285,12 +285,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = HarmonicLearningRate(1.0)
+    val learningRate = HarmonicLearningRate(1.0)
     
     val nonCompliantCommodities = 
-      Array(Commodity(0, 1, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+      Array(Commodity(0, 1, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(0, 1)))
     val compliantCommodities = 
-      Array(Commodity(0, 1, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+      Array(Commodity(0, 1, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(0, 1)))
     
     val sim = new NoRegretSocialRoutingGameSim(graph, latencyFunctions, nonCompliantCommodities, compliantCommodities, randomizedStart)
     sim.runFor(T)
@@ -306,14 +306,14 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
 //      ConstantLearningRate(.1)
       HarmonicLearningRate(3.0)
     
     val commodities = Array(
-        Commodity(0, 1, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
-        Commodity(2, 3, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
-        Commodity(7, 8, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+        Commodity(0, 1, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(7, 8)))
     
     val sim = new TollRoutingGameSim(graph, latencyFunctions, commodities, tollDelay, tollInterval, randomizedStart)
     sim.runFor(T)
@@ -326,14 +326,14 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
       ConstantLearningRate(1.0)
 //      HarmonicLearningRate(1.)
     
     val commodities = Array(
-        Commodity(0, 1, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(0, 1)),
-        Commodity(2, 3, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(2, 3)),
-        Commodity(7, 8, ConstantFlowDemand(1.0), epsilon, updateRule, graph.findLooplessPaths(7, 8)))
+        Commodity(0, 1, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(0, 1)),
+        Commodity(2, 3, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(2, 3)),
+        Commodity(7, 8, ConstantFlowDemand(1.0), learningRate, updateRule, graph.findLooplessPaths(7, 8)))
     
     val sim = new OptimalConstantTollRoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
     sim.runFor(T)
@@ -348,12 +348,12 @@ object Simulations {
     val updateRule = 
       ExponentialUpdate()
 //      FollowTheMeanUpdate()
-    val epsilon = 
+    val learningRate = 
       ConstantLearningRate(.1)
 //      HarmonicLearningRate(10.)
     
     val commodities = Array(
-        Commodity(0, 1, ConstantFlowDemand(2.0), epsilon, updateRule, graph.findLooplessPaths(0, 1)))
+        Commodity(0, 1, ConstantFlowDemand(2.0), learningRate, updateRule, graph.findLooplessPaths(0, 1)))
     
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, 2), "f", "l(f)", 300)
     val sim = new TollRoutingGameSim(graph, latencyFunctions, commodities, tollDelay, tollInterval, randomizedStart)

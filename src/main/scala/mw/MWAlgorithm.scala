@@ -4,7 +4,7 @@ import breeze.linalg._
 class Expert
 
 class MWAlgorithm(
-    val epsilon: LearningRate,
+    val learningRate: LearningRate,
     val experts: Array[Expert],
     val updateRule: UpdateRule) {
   
@@ -27,9 +27,9 @@ class MWAlgorithm(
   def nextStrategy(
       strategy: DenseVector[Double], 
       losses: DenseVector[Double], 
-      epsilon: Double
+      learningRate: Double
       ): DenseVector[Double] = {
-    val weights = nextWeights(strategy, losses, epsilon)
+    val weights = nextWeights(strategy, losses, learningRate)
     val next = (strategy :* weights)
       .map(math.max(_, 0.001)) // to avoid getting stuck in a False Nash
     
