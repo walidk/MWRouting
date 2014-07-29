@@ -97,30 +97,47 @@ class MWCoordinator[G<:Game](
    * y_n the n-th element of averages(stream)
    * then y_n = \sum_{i = 1}^n x_i / n
    */
-  private def averages(stream: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
+  private def weightedAverages(
+      stream: Stream[Array[DenseVector[Double]]], 
+      weightStream: Stream[Array[Double]]): Stream[Array[DenseVector[Double]]] = {
     def plus (xs: Array[DenseVector[Double]], ys: Array[DenseVector[Double]]) =
       (xs zip ys) map ({case(x, y) => x+y})
-    def div (a: Array[DenseVector[Double]], b: Double) =
-      a map (_/b)
+    def mul (xs: Array[DenseVector[Double]], ys: Array[Double]) =
+      xs zip ys map ({case(x, y) => x*y})
+    def div (xs: Array[DenseVector[Double]], ys: Array[Double]) =
+      xs zip ys map ({case(x, y) => x/y})
     def acc(
-        s: Stream[Array[DenseVector[Double]]], 
-        sumSoFar: Array[DenseVector[Double]], 
-        countSoFar: Int): Stream[Array[DenseVector[Double]]] = s match {
-      case h#::t => {
-        val s = plus(h, sumSoFar)
-        div(plus(h, s),countSoFar+1) #:: acc(t, s, countSoFar+1)
+        s: Stream[(Array[DenseVector[Double]], Array[Double])],
+        sCuml: Array[DenseVector[Double]], 
+        wCuml: Array[Double]): Stream[Array[DenseVector[Double]]] = s match {
+      case (hs, hw)#::t => {
+        val s = plus(mul(hs,hw), sCuml)
+        val wCumlNew = wCuml zip hw map ({case(x, y) => x+y})
+        div(plus(hs, s), wCumlNew) #:: acc(t, s, wCumlNew)
       }
     }
-    acc(stream.tail, stream.head, 0)
+    stream zip weightStream match {
+      case (s, w)#::t => acc(t, mul(s, w), w)
+    }
   }
+  
+  private val onesStream: Stream[Array[Double]] = algorithms.map(_=>1.)#::onesStream
+  private def averages(stream: Stream[Array[DenseVector[Double]]]) = weightedAverages(stream, onesStream)
   
   /**
    * 
    */
   val strategiesStream = mappedStream(_.strategies)
   val lossStream = mappedStream(_.losses)
-  val averageStrategiesStream = averages(strategiesStream)
-  val averageLossStream = averages(lossStream)
   val gameStateStream = mappedStream(_.gameHistory.head)
   val learningRateStream = mappedStream(_.learningRates)
+  val regretsStream = lossStream zip strategiesStream map ({case(ls, ss) => {
+    val regret = for((l, s) <- ls zip ss; lBar = l.dot(s))
+      yield for(pathLoss<- l) yield lBar - pathLoss
+    regret
+  }})
+  val averageRegretsStream = weightedAverages(regretsStream, learningRateStream)
+  val averageStrategiesStream = averages(strategiesStream)
+  val averageLossStream = averages(lossStream)
+  
 }

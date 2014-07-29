@@ -62,13 +62,8 @@ class RoutingGameSim(
   val strategies = coordinator.strategiesStream
   val flows = coordinator.gameStateStream.map(_.pathFlows)
   val latencies = coordinator.lossStream
-  val regrets = latencies zip strategies map (x => {
-    val ls = x._1
-    val ss = x._2
-    val regret = for((l, s) <- ls zip ss; lBar = l.dot(s))
-      yield for(pathLoss<- l) yield lBar - pathLoss
-    regret
-  })
+  val regrets = coordinator.regretsStream
+  val avgRegrets = coordinator.averageRegretsStream
   val avgStrategyLatencies = coordinator.averageStrategiesStream.map(s => network.pathLatenciesFromPathFlows(network.pathFlowsFromStrategies(s)))
   
   def runFor(T: Int) {
@@ -76,7 +71,8 @@ class RoutingGameSim(
     Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("out/flows")
     Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend).exportToPdf("out/latencies")
     Visualizer("Average Latencies").plotLineGroups(avgStrategyLatencies.take(T), "t", "Avg strategy latency", legend).exportToPdf("out/avg_strategy_latencies")
-    Visualizer("Regrets").plotLineGroups(regrets.take(T), "t", "Regrets", legend).exportToPdf("out/regrets")
+    Visualizer("Discounted Regrets").plotLineGroups(avgRegrets.take(T), "t", "Discounted Regrets", legend).exportToPdf("out/discountedRegrets")
+    Visualizer("Instantaneous Regrets").plotLineGroups(regrets.take(T), "t", "Instantaneous Regrets", legend).exportToPdf("out/regrets")
     val v = Visualizer("Strategies").plotStrategies(strategies.take(T))
 //    Visualizer("Learning rates").plotLineGroups(learningRates.take(T), "t", "epsilon", legend)
 //    .exportToPdf("out/learning_rates")
@@ -87,5 +83,6 @@ class RoutingGameSim(
     exportToCSV("out/latencies.csv", latencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
     exportToCSV("out/latavg.csv", avgStrategyLatencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
     exportToCSV("out/regrets.csv", regrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
+    exportToCSV("out/discountedRegrets.csv", avgRegrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
   }
 }
