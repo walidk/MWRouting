@@ -1,6 +1,6 @@
 package mw
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, Stream}
 import breeze.linalg._
 import util.Visualizer
 import routing._
@@ -11,7 +11,8 @@ object main {
 //    Simulations.launchNoisyLatencyParallelRoutingGame()
 //    Simulations.launchAdaptiveParallelRoutingGame()
 //    Simulations.launchTimeVaryingParallelRoutingGame()
-    Simulations.launchRoutingGame()
+//    Simulations.launchRoutingGame()
+    Simulations.launchNoisyRoutingGame()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchNoRegretSocialRouting()
 //    Simulations.launchNoRegretSocialTwoLinkRouting()
@@ -188,6 +189,43 @@ object Simulations {
   }
 
     
+  def launchNoisyRoutingGame() {
+    val sigma = .01
+    val noise = GaussianNoise(sigma)
+    val adjacencyMap2Noisy: Map[Int, List[(Int, LatencyFunction)]] = Map(
+      0 -> List((1, SLF(x=>x*x+2.5)*factor + noise), (4, SLF(x=>x/2)*factor + noise)),
+      1 -> List(),
+      2 -> List((3, SLF(x=>x+1.0)*factor + noise), (4, SLF(x=>.5)*factor + noise)),
+      3 -> List(),
+      4 -> List((5, SLF(x=>3*x*x)*factor + noise), (6, SLF(x=>x*x*x)*factor + noise)),
+      5 -> List((1, SLF(x=>x/3)*factor + noise), (3, SLF(x=>x/4)*factor + noise)), 
+      6 -> List((1, SLF(x=>x*x/2)*factor + noise), (3, SLF(x=>x)*factor + noise))
+      )
+      
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap2Noisy)
+    val flowDemand = ConstantFlowDemand(1.0)
+    val updateRule = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+    val rates1 = PolyLearningRate(0.1, 1.)
+    val rates2 = PolyLearningRate(0.5, 2.)
+    val randomizedStart = false
+    val T = 100
+    val commodities = Array(
+        Commodity(0, 1, ConstantFlowDemand(1.0), rates1, updateRule, graph.findLooplessPaths(0, 1)), 
+        Commodity(2, 3, ConstantFlowDemand(1.0), rates2, updateRule, graph.findLooplessPaths(2, 3)) 
+        )
+    val (eqgraph, eqlatencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap2)
+    val eqsim = new RoutingGameSim(eqgraph, eqlatencyFunctions, commodities, randomizedStart)
+    val eqFlows = eqsim.coordinator.gameStateStream.map(_.pathFlows).apply(500)
+    lazy val eqFlowss: Stream[Array[DenseVector[Double]]] = eqFlows#::eqFlowss
+    print(eqFlows(0))
+    val sim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
+    sim.runFor(T)
+    sim.expectedRunFor(T, eqFlowss)
+  }
+  
+  
   def launchDBLoadBalancing() {
     val T = 100
     val adj: Map[Int, List[(Int, LatencyFunction)]] = 

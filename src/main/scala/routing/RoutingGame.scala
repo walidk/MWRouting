@@ -85,4 +85,57 @@ class RoutingGameSim(
     exportToCSV("out/regrets.csv", regrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
     exportToCSV("out/discountedRegrets.csv", avgRegrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
   }
+  
+  // Expected losses
+  def expectedRunFor(T: Int, eqFlows: Stream[Array[DenseVector[Double]]]) {
+    def sumStreams(ass: Stream[Array[DenseVector[Double]]], bss: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
+      ass zip bss map ({case(as, bs) => as zip bs map {case(a, b) => a+b}})
+    }
+    def dist(ass: Stream[Array[DenseVector[Double]]], bss: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
+      ass zip bss map ({
+        case(as, bs) => {
+          val nor: Double = (as zip bs map {case(a, b) => (a-b).norm(2)}).sum
+          Array(DenseVector(nor))
+        }})}
+    def distance(ass: Stream[Array[DenseVector[Double]]], bss: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
+      ass zip bss map ({case(as, bs) => {as zip bs map {case(a, b) => DenseVector((a-b).norm(2))}}})
+      }
+    
+    def scaleStreams(lambda: Double, ass: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
+      ass map (as => as map (a => a*lambda))
+    }
+    
+    val nbSim = 150
+    val algorithms = MWAlgorithmsFromCommodities[RoutingExpert](commodities)
+    val legend = commodities.map(_.paths.map(pathToString))
+    
+    var coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
+    var flows = coordinator.gameStateStream.map(_.pathFlows)
+    var variance = distance(flows, eqFlows)
+    var latencies = coordinator.lossStream
+    var regrets = coordinator.regretsStream
+    
+    for(i <- 2 to nbSim) {
+      coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
+      flows = sumStreams(flows, coordinator.gameStateStream.map(_.pathFlows))
+      latencies = sumStreams(latencies, coordinator.lossStream)
+      regrets = sumStreams(regrets, coordinator.regretsStream)
+      variance = sumStreams(variance, distance(flows, eqFlows))
+    }
+    
+    flows = scaleStreams(1./nbSim, flows)
+    latencies = scaleStreams(1./nbSim, latencies)
+    regrets = scaleStreams(1./nbSim, regrets)
+    variance = scaleStreams(1./nbSim, variance)
+    
+    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("out/flows")
+    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend).exportToPdf("out/latencies")
+    Visualizer("Instantaneous Regrets").plotLineGroups(regrets.take(T), "t", "Instantaneous Regrets", legend).exportToPdf("out/regrets")
+    Visualizer("Variances").plotLineGroups(variance.take(T), "t", "Variances", legend).exportToPdf("out/vars")
+    
+    exportToCSV("out/expflows.csv", flows.take(T), Array("f11", "f12", "f13", "f21", "f22", "f23"))
+    exportToCSV("out/explatencies.csv", latencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
+    exportToCSV("out/expregrets.csv", regrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
+  }
+  
 }
