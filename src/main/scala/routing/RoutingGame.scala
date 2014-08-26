@@ -87,7 +87,7 @@ class RoutingGameSim(
   }
   
   // Expected losses
-  def expectedRunFor(T: Int, eqFlows: Stream[Array[DenseVector[Double]]]) {
+  def runForNoisy(T: Int, eqFlows: Stream[Array[DenseVector[Double]]]) {
     def sumStreams(ass: Stream[Array[DenseVector[Double]]], bss: Stream[Array[DenseVector[Double]]]): Stream[Array[DenseVector[Double]]] = {
       ass zip bss map ({case(as, bs) => as zip bs map {case(a, b) => a+b}})
     }
@@ -111,31 +111,50 @@ class RoutingGameSim(
     
     var coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
     var flows = coordinator.gameStateStream.map(_.pathFlows)
-    var variance = distance(flows, eqFlows)
-    var latencies = coordinator.lossStream
-    var regrets = coordinator.regretsStream
+    val regrets = coordinator.regretsStream
+    val losses = coordinator.lossStream
+    val distances = distance(flows, eqFlows)
+    
+    // One realization
+    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("out/flows")
+    Visualizer("Path Latencies").plotLineGroups(losses.take(T), "t", "l(t)", legend).exportToPdf("out/latencies")
+    Visualizer("Instantaneous Regrets").plotLineGroups(regrets.take(T), "t", "Instantaneous Regrets", legend).exportToPdf("out/regrets")
+    Visualizer("Variances").plotLineGroups(distances.take(T), "t", "Distance to optimum", legend).exportToPdf("out/vars")
+    
+    exportToCSV("out/flows.csv", flows.take(T), Array("f11", "f12", "f13", "f21", "f22", "f23"))
+    exportToCSV("out/latencies.csv", losses.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
+    exportToCSV("out/regrets.csv", regrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
+    exportToCSV("out/distances.csv", distances.take(T), Array("v1", "v2"))
+    
+    var cumFlows = flows
+    var cumVariance = distances
+    var cumLatencies = losses
+    var cumRegrets = regrets
     
     for(i <- 2 to nbSim) {
       coordinator = new MWCoordinator[RoutingGame](game, algorithms, randomizedStart)
-      flows = sumStreams(flows, coordinator.gameStateStream.map(_.pathFlows))
-      latencies = sumStreams(latencies, coordinator.lossStream)
-      regrets = sumStreams(regrets, coordinator.regretsStream)
-      variance = sumStreams(variance, distance(flows, eqFlows))
+      flows = coordinator.gameStateStream.map(_.pathFlows)
+      cumFlows = sumStreams(cumFlows, flows)
+      cumLatencies = sumStreams(cumLatencies, coordinator.lossStream)
+      cumRegrets = sumStreams(cumRegrets, coordinator.regretsStream)
+      cumVariance = sumStreams(cumVariance, distance(flows, eqFlows))
     }
     
-    flows = scaleStreams(1./nbSim, flows)
-    latencies = scaleStreams(1./nbSim, latencies)
-    regrets = scaleStreams(1./nbSim, regrets)
-    variance = scaleStreams(1./nbSim, variance)
+    cumFlows = scaleStreams(1./nbSim, cumFlows)
+    cumLatencies = scaleStreams(1./nbSim, cumLatencies)
+    cumRegrets = scaleStreams(1./nbSim, cumRegrets)
+    cumVariance = scaleStreams(1./nbSim, cumVariance)
     
-    Visualizer("Path Flows").plotLineGroups(flows.take(T), "t", "f(t)", legend).exportToPdf("out/flows")
-    Visualizer("Path Latencies").plotLineGroups(latencies.take(T), "t", "l(t)", legend).exportToPdf("out/latencies")
-    Visualizer("Instantaneous Regrets").plotLineGroups(regrets.take(T), "t", "Instantaneous Regrets", legend).exportToPdf("out/regrets")
-    Visualizer("Variances").plotLineGroups(variance.take(T), "t", "Variances", legend).exportToPdf("out/vars")
+    // Expected
+    Visualizer("Expected Path Flows").plotLineGroups(cumFlows.take(T), "t", "f(t)", legend).exportToPdf("out/expflows")
+    Visualizer("Expected Path Latencies").plotLineGroups(cumLatencies.take(T), "t", "l(t)", legend).exportToPdf("out/explatencies")
+    Visualizer("Expected Instantaneous Regrets").plotLineGroups(cumRegrets.take(T), "t", "Expected Instantaneous Regrets", legend).exportToPdf("out/regrets")
+    Visualizer("Variances").plotLineGroups(cumVariance.take(T), "t", "Variances", legend).exportToPdf("out/expvars")
     
-    exportToCSV("out/expflows.csv", flows.take(T), Array("f11", "f12", "f13", "f21", "f22", "f23"))
-    exportToCSV("out/explatencies.csv", latencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
-    exportToCSV("out/expregrets.csv", regrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
+    exportToCSV("out/expflows.csv", cumFlows.take(T), Array("f11", "f12", "f13", "f21", "f22", "f23"))
+    exportToCSV("out/explatencies.csv", cumLatencies.take(T), Array("l11", "l12", "l13", "l21", "l22", "l23"))
+    exportToCSV("out/expregrets.csv", cumRegrets.take(T), Array("r11", "r12", "r13", "r21", "r22", "r23"))
+    exportToCSV("out/expdistances.csv", cumVariance.take(T), Array("v1", "v2"))
   }
   
 }

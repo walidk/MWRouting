@@ -190,9 +190,18 @@ object Simulations {
 
     
   def launchNoisyRoutingGame() {
-    val sigma = .01
+    val sigma = 0.05
     val noise = GaussianNoise(sigma)
-    val adjacencyMap2Noisy: Map[Int, List[(Int, LatencyFunction)]] = Map(
+    val adj: Map[Int, List[(Int, LatencyFunction)]] = Map(
+      0 -> List((1, SLF(x=>x*x+2.5)*factor), (4, SLF(x=>x/2)*factor)),
+      1 -> List(),
+      2 -> List((3, SLF(x=>x+1.0)*factor), (4, SLF(x=>.5)*factor)),
+      3 -> List(),
+      4 -> List((5, SLF(x=>3*x*x)*factor), (6, SLF(x=>x*x*x)*factor)),
+      5 -> List((1, SLF(x=>x/3)*factor), (3, SLF(x=>x/4)*factor)), 
+      6 -> List((1, SLF(x=>x*x/2)*factor), (3, SLF(x=>x)*factor))
+    )
+    val adjNoisy: Map[Int, List[(Int, LatencyFunction)]] = Map(
       0 -> List((1, SLF(x=>x*x+2.5)*factor + noise), (4, SLF(x=>x/2)*factor + noise)),
       1 -> List(),
       2 -> List((3, SLF(x=>x+1.0)*factor + noise), (4, SLF(x=>.5)*factor + noise)),
@@ -202,7 +211,7 @@ object Simulations {
       6 -> List((1, SLF(x=>x*x/2)*factor + noise), (3, SLF(x=>x)*factor + noise))
       )
       
-    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap2Noisy)
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjNoisy)
     val flowDemand = ConstantFlowDemand(1.0)
     val updateRule = 
       ExponentialUpdate()
@@ -215,14 +224,15 @@ object Simulations {
         Commodity(0, 1, ConstantFlowDemand(1.0), rates1, updateRule, graph.findLooplessPaths(0, 1)), 
         Commodity(2, 3, ConstantFlowDemand(1.0), rates2, updateRule, graph.findLooplessPaths(2, 3)) 
         )
-    val (eqgraph, eqlatencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap2)
+    
+    val (eqgraph, eqlatencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adj)
     val eqsim = new RoutingGameSim(eqgraph, eqlatencyFunctions, commodities, randomizedStart)
     val eqFlows = eqsim.coordinator.gameStateStream.map(_.pathFlows).apply(500)
+    
     lazy val eqFlowss: Stream[Array[DenseVector[Double]]] = eqFlows#::eqFlowss
-    print(eqFlows(0))
+    print(eqFlows(0), eqFlows(1))
     val sim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
-    sim.runFor(T)
-    sim.expectedRunFor(T, eqFlowss)
+    sim.runForNoisy(T, eqFlowss)
   }
   
   
