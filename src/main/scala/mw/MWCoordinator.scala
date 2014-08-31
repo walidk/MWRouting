@@ -136,6 +136,7 @@ class MWCoordinator[G<:Game](
       yield for(pathLoss<- l) yield lBar - pathLoss
     regret
   }})
+  val maxRegretsStream = regretsStream map(a => a map (rs => DenseVector(rs.max)))
   val averageRegretsStream = weightedAverages(regretsStream, learningRateStream)
   val averageStrategiesStream = averages(strategiesStream)
   val averageLossStream = averages(lossStream)

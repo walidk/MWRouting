@@ -49,6 +49,13 @@ class LatencyNetwork(
     edgeLosses
   }
   
+  protected def edgeIntegralLossesFromEdgeFlows(lossFunctions: HashMap[Int, LatencyFunction])(edgeFlows: DenseVector[Double]): DenseVector[Double] = {
+    val edgeLosses = DenseVector.zeros[Double](nbEdges)
+    for (edgeId <- 0 to nbEdges - 1)
+      edgeLosses(edgeId) = lossFunctions(edgeId).antiDerivative(edgeFlows(edgeId))
+    edgeLosses
+  }
+  
   private def pathLossesFromPathFlows(lossFunctions: HashMap[Int, LatencyFunction])(pathFlows: Array[DenseVector[Double]]): Array[DenseVector[Double]] = {
     val edgeFlows = edgeFlowsFromPathFlows(pathFlows)
     val edgeLosses = edgeLossesFromEdgeFlows(lossFunctions)(edgeFlows)
@@ -61,7 +68,12 @@ class LatencyNetwork(
     val edgeCosts = edgeLossesFromEdgeFlows(socialCostFunctions)(edgeFlows)
     edgeCosts.sum
   }
-    
+  
+  def rosenthalCostFromPathFlows(pathFlows: Array[DenseVector[Double]]): Double = {
+    val edgeFlows = edgeFlowsFromPathFlows(pathFlows)
+    val edgeCosts = edgeIntegralLossesFromEdgeFlows(latencyFunctions)(edgeFlows)
+    edgeCosts.sum
+  }
   
   def pathLatenciesFromPathFlows(pathFlows: Array[DenseVector[Double]]): Array[DenseVector[Double]] =
     pathLossesFromPathFlows(latencyFunctions)(pathFlows)

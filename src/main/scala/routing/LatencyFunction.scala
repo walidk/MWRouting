@@ -3,10 +3,16 @@ package routing
 trait LatencyFunction {  
   def apply(x: Double): Double
   
-  def derivative(): LatencyFunction = {
+  def derivative: LatencyFunction = {
     val thisLatency = this
     val epsilon = 1E-9
     new LatencyFunction(){def apply(x: Double) = (thisLatency.apply(x+epsilon) - thisLatency.apply(x))/epsilon}
+  }
+  
+  def antiDerivative: LatencyFunction = {
+    val thisLatency = this
+    val intervals = 10
+    new LatencyFunction(){def apply(x: Double) = (1 to intervals).map(i => thisLatency(x*i/intervals)*x/intervals).sum}
   }
   
   def +(thatLatency: LatencyFunction): LatencyFunction = { 

@@ -43,12 +43,12 @@ class DirectedGraph {
     ")"
   }
   
-  def findLooplessPaths(sourceId: Int, sinkId: Int): Array[List[Int]] = {
-    val paths = findLooplessPathsAsEdgeList(sourceId: Int, sinkId: Int)
+  def findSimplePaths(sourceId: Int, sinkId: Int): Array[List[Int]] = {
+    val paths = findSimplePathsAsEdgeList(sourceId: Int, sinkId: Int)
     paths.map(_.map(_.id))
   }
   
-  def findLooplessPathsAsEdgeList(sourceId: Int, sinkId: Int): Array[List[Edge]] = {
+  def findSimplePathsAsEdgeList(sourceId: Int, sinkId: Int): Array[List[Edge]] = {
     type IntSet = scala.collection.immutable.HashSet[Int]
     val sink = nodes(sinkId)
     def findPathsRec(current: Node, exploredIds: IntSet): Iterable[List[Edge]] = {
