@@ -11,8 +11,8 @@ trait LatencyFunction {
   
   def antiDerivative: LatencyFunction = {
     val thisLatency = this
-    val intervals = 10
-    new LatencyFunction(){def apply(x: Double) = (1 to intervals).map(i => thisLatency(x*i/intervals)*x/intervals).sum}
+    val intervals = 150
+    new LatencyFunction(){def apply(x: Double) = (1 to intervals).map(i => thisLatency(x*(i-.5)/intervals)*x/intervals).sum}
   }
   
   def +(thatLatency: LatencyFunction): LatencyFunction = { 

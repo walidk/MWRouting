@@ -12,7 +12,8 @@ object main {
 //    Simulations.launchAdaptiveParallelRoutingGame()
 //    Simulations.launchTimeVaryingParallelRoutingGame()
 //    Simulations.launchRoutingGame()
-    Simulations.launchNoisyRoutingGame()
+//    Simulations.launchNoisyRoutingGame()
+    Simulations.launchECCsim3()
 //    Simulations.launchDBLoadBalancing()
 //    Simulations.launchNoRegretSocialRouting()
 //    Simulations.launchNoRegretSocialTwoLinkRouting()
@@ -163,6 +164,100 @@ object Simulations {
     Visualizer("Latency Functions").plotLatencies(latencyFunctions.values.toArray, (0, maxFlow), "f", "l(f)", 300)
   }
   
+  def launchECCsim() {
+    val ECCadj: Map[Int, List[(Int, LatencyFunction)]] = Map(
+      0 -> List((2, SLF(x=>.1))),
+      1 -> List((2, SLF(x=>.5*x)), (3, SLF(x=>x))),
+      2 -> List((3, SLF(x=>.5*x)), (4, SLF(x=>x*x))),
+      3 -> List((4, SLF(x=>.5*x))),
+      4 -> List()
+      )
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(ECCadj)
+    val T = 100
+    val randomizedStart = false
+    val updateRule1 = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+//      PolyUpdate(.5)
+    val updateRule2 = 
+      ExponentialUpdate()
+    val eps1 = 
+      PolyLearningRate(.5, .6)
+//      HarmonicLearningRate(.5)
+//      ConstantLearningRate(4.)
+    val eps2 =
+      PolyLearningRate(.2, 2.)
+//      ConstantLearningRate(4.)
+    val commodities = Array(
+        Commodity(0, 4, ConstantFlowDemand(1.0), eps1, updateRule1, graph.findSimplePaths(0, 4)), 
+        Commodity(1, 4, ConstantFlowDemand(1.0), eps2, updateRule2, graph.findSimplePaths(1, 4))
+        )
+    
+    val sim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  def launchECCsim2() {
+    val ECCadj: Map[Int, List[(Int, LatencyFunction)]] = Map(
+      0 -> List((1, SLF(x=>.2)), (1, SLF(x=>x))),
+      1 -> List((2, SLF(x=>.6)), (2, SLF(x=>x))),
+      2 -> List((3, SLF(x=>.1)), (3, SLF(x=>x))),
+      3 -> List()
+      )
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(ECCadj)
+    val T = 200
+    val randomizedStart = false
+    val updateRule1 = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+//      PolyUpdate(.5)
+    val updateRule2 = 
+      ExponentialUpdate()
+    val eps1 = 
+      PolyLearningRate(.6, .15)
+//      HarmonicLearningRate(.5)
+//      ConstantLearningRate(4.)
+    val eps2 =
+      PolyLearningRate(.2, 2.)
+//      ConstantLearningRate(4.)
+    val commodities = Array(
+        Commodity(0, 3, ConstantFlowDemand(1.0), eps1, updateRule1, graph.findSimplePaths(0, 3)) 
+        )
+    
+    val sim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
+    sim.runFor(T)
+  }
+  
+  def launchECCsim3() {
+    val ECCadj: Map[Int, List[(Int, LatencyFunction)]] = Map(
+      0 -> List((1, SLF(x=>.35)), (1, SLF(x=>.4))),
+      1 -> List((2, SLF(x=>.6)), (2, SLF(x=>.55))),
+      2 -> List((3, SLF(x=>.1)), (3, SLF(x=>.2))),
+      3 -> List()
+      )
+    val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(ECCadj)
+    val T = 2500
+    val randomizedStart = false
+    val updateRule1 = 
+      ExponentialUpdate()
+//      FollowTheMeanUpdate()
+//      PolyUpdate(.5)
+    val updateRule2 = 
+      ExponentialUpdate()
+    val eps1 = 
+      PolyLearningRate(.6, .15)
+//      HarmonicLearningRate(.5)
+//      ConstantLearningRate(4.)
+    val eps2 =
+      PolyLearningRate(.2, 2.)
+//      ConstantLearningRate(4.)
+    val commodities = Array(
+        Commodity(0, 3, ConstantFlowDemand(1.0), eps1, updateRule1, graph.findSimplePaths(0, 3)) 
+        )
+    
+    val sim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
+    sim.runFor(T)
+  }
   
   def launchRoutingGame() { 
     val (graph, latencyFunctions) = DirectedGraph.graphAndLatenciesFromAdjMap(adjacencyMap3)
@@ -219,10 +314,8 @@ object Simulations {
     val eqsim = new RoutingGameSim(graph, latencyFunctions, commodities, randomizedStart)
     val eqFlows = eqsim.coordinator.gameStateStream.map(_.pathFlows).apply(500)
     
-    lazy val eqFlowss: Stream[Array[DenseVector[Double]]] = eqFlows#::eqFlowss
-    print(eqFlows(0), eqFlows(1))
     val sim = new StochasticRoutingGameSim(graph, latencyFunctions, commodities, randomizedStart, noiseFunction)
-    sim.runFor(40, 210, eqFlowss)
+    sim.runFor(60, 100, eqFlows)
   }
   
   

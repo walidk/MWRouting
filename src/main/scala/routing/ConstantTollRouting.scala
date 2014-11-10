@@ -10,7 +10,8 @@ class ConstantTollRoutingGame(network: LatencyNetwork, pathTolls: Array[DenseVec
     val pathFlows = network.pathFlowsFromStrategies(strategies)
     val pathLatencies = network.pathLatenciesFromPathFlows(pathFlows)
     val pathLosses = for ((tolls, latencies) <- pathTolls.zip(pathLatencies)) yield tolls + latencies
-    NetworkState(pathFlows, pathLosses)
+    val potential = network.rosenthalCostFromPathFlows(pathFlows)
+    NetworkState(pathFlows, pathLosses, potential)
   }
 }
 

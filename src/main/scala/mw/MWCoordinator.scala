@@ -138,6 +138,7 @@ class MWCoordinator[G<:Game](
   }})
   val maxRegretsStream = regretsStream map(a => a map (rs => DenseVector(rs.max)))
   val averageRegretsStream = weightedAverages(regretsStream, learningRateStream)
+  def customAverageRegretsStream(weights: Stream[Array[Double]]) = weightedAverages(regretsStream, weights)
   val averageStrategiesStream = averages(strategiesStream)
   val averageLossStream = averages(lossStream)
   

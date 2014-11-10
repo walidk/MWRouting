@@ -20,6 +20,6 @@ case class RootLearningRate(maxLoss: Double) extends LearningRate {
 }
 
 case class PolyLearningRate(power: Double, maxLoss: Double) extends LearningRate {
-  private val f: Int=>Double = t=>1./(1.+math.pow(t, power))/maxLoss
+  private val f: Int=>Double = t=>2./(2.+math.pow(t, power))/maxLoss
   def apply(stateHistory: List[GameState]) = f
 }
